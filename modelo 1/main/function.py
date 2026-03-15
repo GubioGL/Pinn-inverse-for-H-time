@@ -1,31 +1,8 @@
 import torch as tc
+import matplotlib.pyplot as plt
 import numpy as np
 import qutip as qt
-import torch.nn as nn
-
-from tqdm import tqdm
-
-import matplotlib.pyplot as plt
-    
-class Rede(nn.Module):
-    def __init__(self, neuronio, activation, input_=1, output_=1, creat_p=False, N_of_paramater=1):
-        super().__init__()       
-        # input camada linear
-        self.first_layer = nn.Linear(input_, neuronio[0])
-        self.second_layer = nn.Linear(neuronio[0], output_)
-        
-        # Função de ativação
-        self.activation_ = activation
-        
-        # Criar o parâmetro
-        if creat_p:
-            self.parametro = nn.Parameter(tc.rand(N_of_paramater))
-            
-    def forward(self, x):
-        x = self.first_layer(x)
-        x = self.activation_(x)
-        x = self.second_layer(x)
-        return x
+# print(sm * sm.dag()*sm)
 
 # Define the loss function
 def mse_loss(y_pred, y_true):
@@ -76,7 +53,6 @@ def Loss_EDO(H_,rho_rvetor,rho_ivetor,tempo,base_rho):
         loss_edo += tc.mean( (drho_dt_real - H_rho_R[:,i])**2 + (drho_dt_imag - H_rho_I[:,i])**2 )
     return loss_edo
 
-
 def expected_plot(rho_, O_, expected_data, time_, select_observables=None, save_plot=None):
     """
     Grafica los valores esperados ⟨O⟩ para cada observable, calculados a partir de rho_.
@@ -104,7 +80,7 @@ def expected_plot(rho_, O_, expected_data, time_, select_observables=None, save_
     for i, obs_idx in enumerate(select_observables):
         Oi = O_[obs_idx]                     # Operador observable [d,d]
         #print(rho_.shape, Oi.shape)
-        v_pred = expected(rho_, Oi).sum(dim=-1).real    # ⟨O⟩ = Tr[ρ O], toma parte real
+        v_pred = expected(rho_, Oi).real     # ⟨O⟩ = Tr[ρ O], toma parte real
         v_true = expected_data[:, obs_idx].real
         #print(v_pred.shape)
         #print(v_true.shape)
@@ -126,7 +102,44 @@ def expected_plot(rho_, O_, expected_data, time_, select_observables=None, save_
         fig.savefig(save_plot, dpi=300)
     plt.show()
 
-def data_jc(lista_J, tfinal, N, device="cpu", state=True):
+def plots_rho(rho_NNR=0,rho_NNI=0,rho_data=0 ):
+    fig, axs = plt.subplots(nrows=3, ncols=2 , figsize=(12,4), sharex=True)
+
+    im =axs[0,0].imshow(rho_NNR.detach().numpy().T,cmap="jet")
+    axs[0,0].set_title(r"$\mathcal{R}(\rho_{NN})$")
+    axs[0,0].set_aspect("auto")
+    fig.colorbar(im, orientation='vertical')
+
+    im =axs[1,0].imshow(rho_data.real.T.detach().numpy(),cmap="jet")
+    axs[1,0].set_title(r"$\mathcal{R}(\hat{\rho}_t)$")
+    axs[1,0].set_aspect("auto")
+    fig.colorbar(im, orientation='vertical')
+
+    im =axs[2,0].imshow(abs(rho_data.real-rho_NNR).T.detach().numpy(),cmap="jet")
+    axs[2,0].set_title(r"$|\mathcal{R}(\hat{\rho}_t) - \mathcal{R}(\rho_t)|$")
+    axs[2,0].set_xlabel(r"$t$")
+    axs[2,0].set_aspect("auto")
+    fig.colorbar(im, orientation='vertical')
+
+    im =axs[0,1].imshow(rho_NNI.detach().numpy().T,cmap="jet")
+    axs[0,1].set_title(r"$\mathcal{I}(\rho_{NN})$")
+    axs[0,1].set_aspect("auto")
+    fig.colorbar(im, orientation='vertical')
+
+    im =axs[1,1].imshow(rho_data.imag.T.detach().numpy(),cmap="jet")
+    axs[1,1].set_title(r"$\mathcal{I}(\hat{\rho}_t)$")
+    axs[1,1].set_aspect("auto")
+    fig.colorbar(im, orientation='vertical')
+
+    im = axs[2,1].imshow(abs(rho_data.imag-rho_NNI).T.detach().numpy() ,cmap="jet")
+    axs[2,1].set_title(r"$|\mathcal{I}(\hat{\rho}_{NN}) - \mathcal{I}(\rho_t)|$")
+    axs[2,1].set_aspect("auto")
+    fig.colorbar(im, orientation='vertical')
+
+    plt.tight_layout()
+    plt.show()
+
+def data(lista_J, tfinal, N, device="cpu", state=True):
     """
     Hamiltoniana dependente do tempo:
         H(t) = - B0 * sigma_y  -  B1 * cos(omega * t) * sigma_x
@@ -140,12 +153,12 @@ def data_jc(lista_J, tfinal, N, device="cpu", state=True):
     sz = qt.sigmaz()
 
     # Non-driving Hamiltonian
-    B0 = lista_J[0] * 2 * np.pi
+    B0 = lista_J[0] * np.pi
     H0 = B0 * sz
 
     # Driving Hamiltonian
     B1 = lista_J[1] 
-    w  = lista_J[2] * 2 * np.pi
+    w  = lista_J[2] * np.pi
     H1 = B1 * sx
     args = {"w": w}
 
@@ -202,65 +215,3 @@ def data_jc(lista_J, tfinal, N, device="cpu", state=True):
     expect = tc.tensor(expect_np, device=device).transpose(0, 1)  # (N, 3)
 
     return y_train, expect, H, O_op
-
-def plots_rho(rho_NNR=0,rho_NNI=0,rho_data=0 ):
-    fig, axs = plt.subplots(nrows=3, ncols=2 , figsize=(12,4), sharex=True)
-
-    im =axs[0,0].imshow(rho_NNR.detach().numpy().T,cmap="jet")
-    axs[0,0].set_title(r"$\mathcal{R}(\rho_{NN})$")
-    axs[0,0].set_aspect("auto")
-    fig.colorbar(im, orientation='vertical')
-
-    im =axs[1,0].imshow(rho_data.real.T.detach().numpy(),cmap="jet")
-    axs[1,0].set_title(r"$\mathcal{R}(\hat{\rho}_t)$")
-    axs[1,0].set_aspect("auto")
-    fig.colorbar(im, orientation='vertical')
-
-    im =axs[2,0].imshow(abs(rho_data.real-rho_NNR).T.detach().numpy(),cmap="jet")
-    axs[2,0].set_title(r"$|\mathcal{R}(\hat{\rho}_t) - \mathcal{R}(\rho_t)|$")
-    axs[2,0].set_xlabel(r"$t$")
-    axs[2,0].set_aspect("auto")
-    fig.colorbar(im, orientation='vertical')
-
-    im =axs[0,1].imshow(rho_NNI.detach().numpy().T,cmap="jet")
-    axs[0,1].set_title(r"$\mathcal{I}(\rho_{NN})$")
-    axs[0,1].set_aspect("auto")
-    fig.colorbar(im, orientation='vertical')
-
-    im =axs[1,1].imshow(rho_data.imag.T.detach().numpy(),cmap="jet")
-    axs[1,1].set_title(r"$\mathcal{I}(\hat{\rho}_t)$")
-    axs[1,1].set_aspect("auto")
-    fig.colorbar(im, orientation='vertical')
-
-    im = axs[2,1].imshow(abs(rho_data.imag-rho_NNI).T.detach().numpy() ,cmap="jet")
-    axs[2,1].set_title(r"$|\mathcal{I}(\hat{\rho}_{NN}) - \mathcal{I}(\rho_t)|$")
-    axs[2,1].set_aspect("auto")
-    fig.colorbar(im, orientation='vertical')
-
-    plt.tight_layout()
-    plt.show()
- 
-def lerning_parameter_hamiltonina(lista_J,device="cpu"):
-    # Parameters:
-    wc  = lista_J[0]* 2 * np.pi
-    wa  = lista_J[1]* 2 * np.pi
-    g0  = lista_J[2]* 2 * np.pi
-    g1  = lista_J[3]* 2 * np.pi
-    g2  = lista_J[4]* 2 * np.pi
-    g3  = lista_J[5]* 2 * np.pi
-
-    # Operators
-    a  = qt.tensor(qt.destroy(2), qt.qeye(2))
-    sm = qt.tensor(qt.qeye(2)   , qt.destroy(2))
-    sx = qt.tensor(qt.qeye(2)   , qt.sigmax())
-    a_dag = a.dag()
-    sm_dag = sm.dag()
-    
-    a = tc.tensor(a.full(), dtype=tc.complex64,device=device)
-    sm = tc.tensor(sm.full(), dtype=tc.complex64,device=device)
-    sx = tc.tensor(sx.full(), dtype=tc.complex64,device=device)
-    a_dag = tc.tensor(a_dag.full(), dtype=tc.complex64,device=device)
-    sm_dag = tc.tensor(sm_dag.full(), dtype=tc.complex64,device=device)
-    # Hamiltonian
-    H = wc*a_dag @ a + wa * sm_dag @ sm  + g1*(a_dag @ sm + a @ sm_dag) + g2 * (a @ sm + a_dag @ sm_dag)  + g3 * (a + a_dag)**2 @ sx + g0 * sx
-    return H
