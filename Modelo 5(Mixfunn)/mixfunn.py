@@ -71,7 +71,7 @@ class Tanh(torch.nn.Module):
         return f
 
 # functions = [Sin(), Cos(), Id()]
-functions = [Sin(), Cos(), ExpAbs(), ExpAbsP(), Sqrt(), Log(), Id()]
+functions = [Sin(), Cos(), ExpAbs(), Id()]
 L = len(functions)
 
 
