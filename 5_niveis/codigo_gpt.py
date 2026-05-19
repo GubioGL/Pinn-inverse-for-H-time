@@ -7,35 +7,6 @@ from tqdm import tqdm
 from qutip import destroy, basis, mesolve
 
 # ============================================================
-# DEVICE
-# ============================================================
-device = tc.device("cuda" if tc.cuda.is_available() else "cpu")
-print("device =", device)
-
-# ============================================================
-# PARÂMETROS FÍSICOS
-# ============================================================
-N_levels = 5
-fq = 5.0
-alfa = -0.3
-Omega = 1.0
-
-tfinal = 2.5
-N_time = 500
-lr = 1e-3
-
-sqrt2 = math.sqrt(2.0)
-sqrt3 = math.sqrt(3.0)
-sqrt4 = math.sqrt(4.0)
-sqrt6 = math.sqrt(6.0)
-
-E0 = 0.0
-E1 = fq
-E2 = 2.0 * fq
-E3 = 3.0 * fq
-E4 = 4.0 * fq
-
-# ============================================================
 # QUTIP: MESMO MODELO EFETIVO DAS EQUAÇÕES USADAS NO PINN
 # ============================================================
 def simulate_transmon(t_points):
@@ -45,7 +16,7 @@ def simulate_transmon(t_points):
 
     # Mantendo a mesma convenção do seu caso:
     # H = fq a†a + alfa (a+a†)^4 + Omega (a+a†)
-    H0 = fq * adag * a + alfa * (Xop ** 4)
+    H0 =  fq * adag * a + (alfa / 2.0)*(a.dag() +a)*(a.dag() +a)*(a.dag() +a)*(a.dag() +a) #
     H_drive = Omega * Xop
     H = H0 + H_drive
 
@@ -55,62 +26,6 @@ def simulate_transmon(t_points):
     result = mesolve(H, psi0, t_points, [], proj_ops)
     expect = np.array(result.expect).T
     return tc.tensor(expect, dtype=tc.float32, device=device)
-
-# ============================================================
-# TEMPO
-# ============================================================
-time_np = np.linspace(0.0, tfinal, N_time)
-
-time = tc.linspace(
-    0.0,
-    tfinal,
-    N_time,
-    dtype=tc.float32,
-    requires_grad=True,
-    device=device
-).reshape((-1, 1))
-
-wt = Omega * tc.ones((N_time, 1), dtype=tc.float32, device=device)
-
-data = simulate_transmon(time_np)
-
-# ============================================================
-# SUA REDE
-# Saída:
-# y[:,0:5] = R0..R4
-# y[:,5:10] = I0..I4
-# ============================================================
-neuronio = [20, 20]
-
-X_vector = Rede(
-    neuronio=neuronio,
-    input_=1,
-    output_=10,
-    activation=[SIN()] * len(neuronio)
-).to(device)
-
-opt = tc.optim.Adam(X_vector.parameters(), lr=lr)
-
-# ============================================================
-# HIPERPARÂMETROS DO CAUSAL TRAINING
-# Inspirados no artigo:
-# eps_list = [1e-2, 1e-1, 1e0, 1e1, 1e2]
-# delta ~ 0.99
-# ============================================================
-eps_list = [1e-2, 1e-1, 1e0, 1e1, 1e2]
-delta = 0.99
-
-# Número de blocos causais no tempo
-# Pode testar 16, 32, 64. Para seu caso, 32 costuma ser um bom início.
-Nt_causal = 32
-
-# iterações máximas por estágio epsilon
-steps_per_eps = 2000
-
-# pesos globais
-lambda_ic = 1e3
-lambda_data = 1.0
-lambda_norm = 1.0
 
 # ============================================================
 # FUNÇÕES AUXILIARES
@@ -126,8 +41,6 @@ def get_time_chunks(n_points, n_chunks):
         if b > a:
             chunks.append((a, b))
     return chunks
-
-chunks = get_time_chunks(N_time, Nt_causal)
 
 def gradients_all_outputs(y, x):
     """
@@ -287,114 +200,202 @@ def compute_causal_weights(L_vec, eps):
             w[1:] = tc.exp(-eps * prefix[:-1])
     return w
 
-# ============================================================
-# HISTÓRICO
-# ============================================================
-LOSS_total_hist = []
-LOSS_phys_hist = []
-LOSS_ic_hist = []
-LOSS_data_hist = []
-LOSS_norm_hist = []
-MIN_W_hist = []
-EPS_hist = []
 
-# ============================================================
-# TREINAMENTO CAUSAL
-# ============================================================
-global_step = 0
+if __name__ == "__main__":
+    # ============================================================
+    # DEVICE
+    # ============================================================
+    device = tc.device("cuda" if tc.cuda.is_available() else "cpu")
+    print("device =", device)
 
-for eps in eps_list:
-    print(f"\n=== Iniciando estágio causal com eps = {eps:.1e} ===")
+    # ============================================================
+    # PARÂMETROS FÍSICOS
+    # ============================================================
+    N_levels = 5
+    fq = 5.0
+    alfa = -0.3
+    Omega = 1.0
 
-    for step in tqdm(range(steps_per_eps), desc=f"eps={eps:.1e}"):
-        y = X_vector(time)
-        dy_dt = gradients_all_outputs(y, time)
+    tfinal = 2.5
+    N_time = 100
+    lr = 1e-2
 
-        # perdas temporais por bloco
-        L_vec, pointwise_res, ic_loss_unweighted = compute_temporal_losses(
-            y, dy_dt, wt, chunks, lambda_ic=lambda_ic
-        )
+    sqrt2 = math.sqrt(2.0)
+    sqrt3 = math.sqrt(3.0)
+    sqrt4 = math.sqrt(4.0)
+    sqrt6 = math.sqrt(6.0)
 
-        # pesos causais (detach!)
-        w = compute_causal_weights(L_vec, eps)
+    E0 = 0.0
+    E1 = fq
+    E2 = 2.0 * fq
+    E3 = 3.0 * fq
+    E4 = 4.0 * fq 
+    
+    # ============================================================
+    # TEMPO
+    # ============================================================
+    time_np = np.linspace(0.0, tfinal, N_time)
 
-        # perda física causal: soma ponderada dos blocos
-        loss_phys = (w * L_vec).mean()
+    time = tc.linspace(
+        0.0,
+        tfinal,
+        N_time,
+        dtype=tc.float32,
+        requires_grad=True,
+        device=device
+    ).reshape((-1, 1))
 
-        # perdas auxiliares
-        loss_data = lambda_data * compute_data_loss(y, data)
-        loss_norm = lambda_norm * compute_norm_loss(y)
+    wt = Omega * tc.ones((N_time, 1), dtype=tc.float32, device=device)
 
-        # total
-        loss = loss_phys + loss_data + loss_norm
+    data = simulate_transmon(time_np)
+   
+    # ============================================================
+    # SUA REDE
+    # Saída:
+    # y[:,0:5] = R0..R4
+    # y[:,5:10] = I0..I4
+    # ============================================================
+    neuronio = [10, 10]
 
-        opt.zero_grad()
-        loss.backward()
-        opt.step()
+    X_vector = Rede(
+        neuronio=neuronio,
+        input_=1,
+        output_=10,
+        activation=[SIN()] * len(neuronio)
+    ).to(device)
 
-        # logs
-        min_w = w[1:].min().item() if len(w) > 1 else 1.0
+    opt = tc.optim.Adam(X_vector.parameters(), lr=lr)
 
-        LOSS_total_hist.append(loss.detach().cpu().item())
-        LOSS_phys_hist.append(loss_phys.detach().cpu().item())
-        LOSS_ic_hist.append((ic_loss_unweighted.detach() / lambda_ic).cpu().item())
-        LOSS_data_hist.append(loss_data.detach().cpu().item())
-        LOSS_norm_hist.append(loss_norm.detach().cpu().item())
-        MIN_W_hist.append(min_w)
-        EPS_hist.append(eps)
+    # ============================================================
+    # HIPERPARÂMETROS DO CAUSAL TRAINING
+    # Inspirados no artigo:
+    # eps_list = [1e-2, 1e-1, 1e0, 1e1, 1e2]
+    # delta ~ 0.99
+    # ============================================================
+    eps_list = [1e-2, 1e-1, 1e0, 1e1, 1e2]
+    delta = 0.99
 
-        global_step += 1
+    # Número de blocos causais no tempo
+    # Pode testar 16, 32, 64. Para seu caso, 32 costuma ser um bom início.
+    Nt_causal = 32
 
-        # stopping criterion do artigo
-        if min_w > delta:
-            print(f"Stopping criterion atingido em eps={eps:.1e}: min(w)={min_w:.4f}")
-            break
+    # iterações máximas por estágio epsilon
+    steps_per_eps = 5000
 
-# ============================================================
-# PLOTS DE TREINO
-# ============================================================
-plt.figure(figsize=(9, 5))
-plt.plot(LOSS_phys_hist, label="loss_phys_causal")
-plt.plot(LOSS_ic_hist, label="loss_ic")
-plt.plot(LOSS_data_hist, label="loss_data")
-plt.plot(LOSS_norm_hist, label="loss_norm")
-plt.yscale("log")
-plt.legend()
-plt.tight_layout()
-plt.show()
+    # pesos globais
+    lambda_ic = 1e3
+    lambda_data = 1.0
+    lambda_norm = 1.0
+    
+    chunks = get_time_chunks(N_time, Nt_causal)
+    
+    # ============================================================
+    # HISTÓRICO
+    # ============================================================
+    LOSS_total_hist = []
+    LOSS_phys_hist = []
+    LOSS_ic_hist = []
+    LOSS_data_hist = []
+    LOSS_norm_hist = []
+    MIN_W_hist = []
+    EPS_hist = []
 
-plt.figure(figsize=(9, 4))
-plt.plot(LOSS_total_hist, "k-", label="loss_total")
-plt.yscale("log")
-plt.legend()
-plt.tight_layout()
-plt.show()
+    # ============================================================
+    # TREINAMENTO CAUSAL
+    # ============================================================
+    global_step = 0
 
-plt.figure(figsize=(9, 4))
-plt.plot(MIN_W_hist, label="min temporal weight")
-plt.axhline(delta, color="r", linestyle="--", label=f"delta={delta}")
-plt.legend()
-plt.tight_layout()
-plt.show()
+    for eps in eps_list:
+        print(f"\n=== Iniciando estágio causal com eps = {eps:.1e} ===")
 
-# ============================================================
-# COMPARAÇÃO FINAL COM QUTIP
-# ============================================================
-with tc.no_grad():
-    y_pred = X_vector(time)
+        for step in tqdm(range(steps_per_eps), desc=f"eps={eps:.1e}"):
+            y = X_vector(time)
+            dy_dt = gradients_all_outputs(y, time)
 
-R_pred = y_pred[:, 0:5]
-I_pred = y_pred[:, 5:10]
-P_pred = (R_pred**2 + I_pred**2).cpu().numpy()
-P_qutip = data.cpu().numpy()
+            # perdas temporais por bloco
+            L_vec, pointwise_res, ic_loss_unweighted = compute_temporal_losses(
+                y, dy_dt, wt, chunks, lambda_ic=lambda_ic
+            )
 
-plt.figure(figsize=(10, 6))
-for i in range(5):
-    plt.plot(time_np, P_qutip[:, i], label=f"P{i} qutip")
-    plt.plot(time_np, P_pred[:, i], "--", label=f"P{i} pinn")
+            # pesos causais (detach!)
+            w = compute_causal_weights(L_vec, eps)
 
-plt.xlabel("t")
-plt.ylabel("População")
-plt.legend(ncol=2)
-plt.tight_layout()
-plt.show()
+            # perda física causal: soma ponderada dos blocos
+            loss_phys = (w * L_vec).mean()
+
+            # perdas auxiliares
+            loss_data = lambda_data * compute_data_loss(y, data)
+            loss_norm = lambda_norm * compute_norm_loss(y)
+
+            # total
+            loss = loss_phys + loss_data + loss_norm
+
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
+
+            # logs
+            min_w = w[1:].min().item() if len(w) > 1 else 1.0
+
+            LOSS_total_hist.append(loss.detach().cpu().item())
+            LOSS_phys_hist.append(loss_phys.detach().cpu().item())
+            LOSS_ic_hist.append((ic_loss_unweighted.detach() / lambda_ic).cpu().item())
+            LOSS_data_hist.append(loss_data.detach().cpu().item())
+            LOSS_norm_hist.append(loss_norm.detach().cpu().item())
+            MIN_W_hist.append(min_w)
+            EPS_hist.append(eps)
+
+            global_step += 1
+
+            # stopping criterion do artigo
+            if min_w > delta:
+                print(f"Stopping criterion atingido em eps={eps:.1e}: min(w)={min_w:.4f}")
+                break
+
+    # ============================================================
+    # PLOTS DE TREINO
+    # ============================================================
+    plt.figure(figsize=(9, 5))
+    plt.plot(LOSS_phys_hist, label="loss_phys_causal")
+    plt.plot(LOSS_ic_hist, label="loss_ic")
+    plt.plot(LOSS_data_hist, label="loss_data")
+    plt.plot(LOSS_norm_hist, label="loss_norm")
+    plt.yscale("log")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("loss_phys_causal.png")
+
+    plt.figure(figsize=(9, 4))
+    plt.plot(LOSS_total_hist, "k-", label="loss_total")
+    plt.yscale("log")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("loss_total.png")
+
+    plt.figure(figsize=(9, 4))
+    plt.plot(MIN_W_hist, label="min temporal weight")
+    plt.axhline(delta, color="r", linestyle="--", label=f"delta={delta}")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("min_temporal_weight.png")
+    # ============================================================
+    # COMPARAÇÃO FINAL COM QUTIP
+    # ============================================================
+    with tc.no_grad():
+        y_pred = X_vector(time)
+
+    R_pred = y_pred[:, 0:5]
+    I_pred = y_pred[:, 5:10]
+    P_pred = (R_pred**2 + I_pred**2).cpu().numpy()
+    P_qutip = data.cpu().numpy()
+
+    plt.figure(figsize=(10, 6))
+    for i in range(5):
+        plt.plot(time_np, P_qutip[:, i], label=f"P{i} qutip")
+        plt.plot(time_np, P_pred[:, i], "--", label=f"P{i} pinn")
+
+    plt.xlabel("t")
+    plt.ylabel("População")
+    plt.legend(ncol=2)
+    plt.tight_layout()
+    plt.savefig("comparacao_final.png")
