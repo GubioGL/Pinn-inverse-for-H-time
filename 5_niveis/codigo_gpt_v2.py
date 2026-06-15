@@ -16,16 +16,17 @@ print("device =", device)
 # ============================================================
 # QUTIP: MESMO MODELO EFETIVO DAS EQUAÇÕES USADAS NO PINN
 # ============================================================
-def simulate_transmon(t_points):
+def simulate_transmon(t_points, fq, alfa, field_fn, N_levels):
     a = destroy(N_levels)
     adag = a.dag()
     Xop = adag + a
 
-    # Mantendo a mesma convenção do seu caso:
-    # H = fq a†a + alfa (a+a†)^4 + Omega (a+a†)
-    H0 = fq * adag * a + alfa * (Xop ** 4)
-    H_drive = Omega * Xop
-    H = H0 + H_drive
+    H0 = fq * adag * a + (alfa / 2.0)*(a.dag() +a)*(a.dag() +a)*(a.dag() +a)*(a.dag() +a)
+    #H0 = fq * a.dag() * a + (alfa/2) * a.dag() * a.dag() * a * a
+    
+    # Time-dependent drive: H = [H0, [Xop, field_array]]
+    field_array = field_fn(t_points)
+    H = [H0, [Xop, field_array]]
 
     psi0 = basis(N_levels, 0)
     proj_ops = [basis(N_levels, i) * basis(N_levels, i).dag() for i in range(N_levels)]
@@ -214,11 +215,15 @@ if "__main__" == __name__:
     N_levels = 5
     fq = 5.0
     alfa = -0.3
-    Omega = 1.0
 
-    tfinal = 2.5
-    N_time = 500
-    lr = 1e-3
+    tfinal = 1.2*np.pi
+    N_time = 1000
+    lr = 1e-2
+
+    def Field(t):
+        return (
+            1.5 * np.sin(2.0 * t) - 0.3 * np.cos(3 * t - 0.5) + 0.4 * np.sin(7.0 * t)
+        ) * np.sin(np.pi * t / tfinal) ** 2
 
     sqrt2 = math.sqrt(2.0)
     sqrt3 = math.sqrt(3.0)
@@ -260,7 +265,7 @@ if "__main__" == __name__:
         activation=[SIN()] * len(neuronio)
     ).to(device)
     
-    neuronio = [5, 5]    
+    neuronio = [50, 50]    
     p_vector = Rede(
         neuronio=neuronio,
         input_=1,
@@ -269,7 +274,7 @@ if "__main__" == __name__:
     ).to(device)
     
     opt = tc.optim.Adam(list(X_vector.parameters()) + list(p_vector.parameters()), lr=lr)
-    data = simulate_transmon(time_np)
+    data = simulate_transmon(time_np, fq, alfa, Field, N_levels)
     # ============================================================
     # HIPERPARÂMETROS DO CAUSAL TRAINING
     # Inspirados no artigo:
@@ -282,11 +287,11 @@ if "__main__" == __name__:
     # Número de blocos causais no tempo
     # Pode testar 16, 32, 64. Para seu caso, 32 costuma ser um bom início.
     
-    Nt_causal = 32
+    Nt_causal = 64
     chunks = get_time_chunks(N_time, Nt_causal)
     
     # iterações máximas por estágio epsilon
-    steps_per_eps = 10000
+    steps_per_eps = 30000
 
     # pesos globais
     lambda_ic = 1e3
@@ -360,29 +365,29 @@ if "__main__" == __name__:
     # ============================================================
     # PLOTS DE TREINO
     # ============================================================
-    plt.figure(figsize=(9, 5))
-    plt.plot(LOSS_phys_hist, label="loss_phys_causal")
-    plt.plot(LOSS_ic_hist, label="loss_ic")
-    plt.plot(LOSS_data_hist, label="loss_data")
-    plt.plot(LOSS_norm_hist, label="loss_norm")
-    plt.yscale("log")
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
+    # plt.figure(figsize=(9, 5))
+    # plt.plot(LOSS_phys_hist, label="loss_phys_causal")
+    # plt.plot(LOSS_ic_hist, label="loss_ic")
+    # plt.plot(LOSS_data_hist, label="loss_data")
+    # plt.plot(LOSS_norm_hist, label="loss_norm")
+    # plt.yscale("log")
+    # plt.legend()
+    # plt.tight_layout()
+    # plt.show()
 
-    plt.figure(figsize=(9, 4))
-    plt.plot(LOSS_total_hist, "k-", label="loss_total")
-    plt.yscale("log")
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
+    # plt.figure(figsize=(9, 4))
+    # plt.plot(LOSS_total_hist, "k-", label="loss_total")
+    # plt.yscale("log")
+    # plt.legend()
+    # plt.tight_layout()
+    # plt.show()
 
-    plt.figure(figsize=(9, 4))
-    plt.plot(MIN_W_hist, label="min temporal weight")
-    plt.axhline(delta, color="r", linestyle="--", label=f"delta={delta}")
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
+    # plt.figure(figsize=(9, 4))
+    # plt.plot(MIN_W_hist, label="min temporal weight")
+    # plt.axhline(delta, color="r", linestyle="--", label=f"delta={delta}")
+    # plt.legend()
+    # plt.tight_layout()
+    # plt.show()
 
     # ============================================================
     # COMPARAÇÃO FINAL COM QUTIP
@@ -404,4 +409,23 @@ if "__main__" == __name__:
     plt.ylabel("População")
     plt.legend(ncol=2)
     plt.tight_layout()
+    plt.savefig("populacoes_pinn_vs_qutip.png", dpi=150)
+    plt.show()
+
+    # ============================================================
+    # COMPARAÇÃO: CAMPO REAL vs CAMPO APRENDIDO PELA REDE
+    # ============================================================
+    with tc.no_grad():
+        field_pred = p_vector(time).cpu().numpy().flatten()
+
+    field_true = Field(time_np)
+
+    plt.figure(figsize=(10, 4))
+    plt.plot(time_np, field_true, label="Field(t) real", color="blue")
+    plt.plot(time_np, field_pred, "--", label="p_vector(t) aprendido", color="red")
+    plt.xlabel("t")
+    plt.ylabel("Campo")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("campo_pinn_vs_real.png", dpi=150)
     plt.show()
