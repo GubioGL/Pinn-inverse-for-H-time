@@ -72,8 +72,6 @@ solver_options = {
     "method": "diffrax",
     "normalize_output": False,
     "progress_bar": False,
-    "rtol": 1e-5,
-    "atol": 1e-6,
 }
 
 
@@ -136,9 +134,9 @@ params = {"theta": jnp.array(0.4),}
 learning_rate = 1e-2
 epochs = 200
 
-# Compilar UMA VEZ — o maior ganho de velocidade:
-# sem isso o JAX retraça o grafo computacional a cada época
-grad_fn = jit(value_and_grad(loss_fn))
+# Nota: QuTiP não é compatível com JAX JIT, então não compilamos a função
+# (QuTiP faz operações booleanas que não funcionam com JAX tracers)
+grad_fn = value_and_grad(loss_fn)
 
 loss_history = []
 theta_history = []

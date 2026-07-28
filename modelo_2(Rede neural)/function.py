@@ -4,7 +4,7 @@ import qutip as qt
 import torch.nn as nn
 import matplotlib.pyplot as plt
 
-from torch.optim.lr_scheduler import StepLR
+#from torch.optim.lr_scheduler import StepLR
 from tqdm import tqdm
 
 
