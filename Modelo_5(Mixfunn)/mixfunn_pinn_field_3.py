@@ -235,12 +235,12 @@ if __name__ == "__main__":
         valor_esperado_data[:,i].cpu()
         X_[:,i]
         
-        tc.save(X_vector.state_dict(), f"Modelo 5(Mixfunn)/save/X_vector_{seed}.pth")
-        tc.save(mixfunn_field.state_dict(), f"Modelo 5(Mixfunn)/save/mixfunn_field_{seed}.pth")
-        np.save(f"Modelo 5(Mixfunn)/save/field_original_{seed}.npy", field_original)
-        np.save(f"Modelo 5(Mixfunn)/save/field_predito_{seed}.npy", JX)
-        np.save(f"Modelo 5(Mixfunn)/save/X_predito_{seed}.npy", X_)
-        np.save(f"Modelo 5(Mixfunn)/save/X_esperado_{seed}.npy", valor_esperado_data.cpu().numpy())
+        tc.save(X_vector.state_dict(), f"Modelo_5(Mixfunn)/save/X_vector_{seed}.pth")
+        tc.save(mixfunn_field.state_dict(), f"Modelo_5(Mixfunn)/save/mixfunn_field_{seed}.pth")
+        np.save(f"Modelo_5(Mixfunn)/save/field_original_{seed}.npy", field_original)
+        np.save(f"Modelo_5(Mixfunn)/save/field_predito_{seed}.npy", JX)
+        np.save(f"Modelo_5(Mixfunn)/save/X_predito_{seed}.npy", X_)
+        np.save(f"Modelo_5(Mixfunn)/save/X_esperado_{seed}.npy", valor_esperado_data.cpu().numpy())
         
         
         ###### plote save ########
@@ -252,7 +252,7 @@ if __name__ == "__main__":
         plt.plot(JX,"r--",label="NN - Field")
         plt.plot(field_original,"b-",label="Original Field")
         plt.legend()
-        plt.savefig(f"Modelo 5(Mixfunn)/save/field_comparison_{seed}.png")
+        plt.savefig(f"Modelo_5(Mixfunn)/save/field_comparison_{seed}.png")
         #plt.show()
 
         plt.figure()
@@ -267,5 +267,5 @@ if __name__ == "__main__":
         plt.ylabel('Expectation Value')
         plt.legend()
         plt.title('Time Evolution from PINN')
-        plt.savefig(f"Modelo 5(Mixfunn)/save/expectation_comparison_{seed}.png")
+        plt.savefig(f"Modelo_5(Mixfunn)/save/expectation_comparison_{seed}.png")
         #plt.show()

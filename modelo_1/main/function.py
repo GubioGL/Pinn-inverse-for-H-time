@@ -26,7 +26,9 @@ def Loss_EDO(H_,rho_rvetor,rho_ivetor,tempo,base_rho):
     rho_  = rho_rvetor.reshape((rho_rvetor.shape[0],base_rho,base_rho)) + 1j*rho_ivetor.reshape((rho_rvetor.shape[0],base_rho,base_rho))
     #  Calculando o Comutador do Hamiltoniano com a matriz densidade. 
     #   O resultado deve ser um tensor de 100 linhas e (2,2).
-    H_rho_R = (commutator(H_.real,rho_.imag)- commutator(H_.imag,rho_.real))
+    # -i[H,rho]: parte real = [Hr,ri] + [Hi,rr]; parte imag = [Hi,ri] - [Hr,rr]
+    # (o sinal do termo [Hi,rr] estava trocado; só aparece quando H tem parte imaginária, ex. sigma_y)
+    H_rho_R = (commutator(H_.real,rho_.imag)+ commutator(H_.imag,rho_.real))
     H_rho_I = (commutator(H_.imag,rho_.imag)- commutator(H_.real,rho_.real))
     #converter para vetor
     H_rho_R = H_rho_R.reshape((len(tempo),base_rho**2))

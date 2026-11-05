@@ -229,5 +229,5 @@ class MixFunn(nn.Module):
             x = self.layers(x)
         else:
             x = self.layers1(x)
-        x = self.layers2(x)
+            x = self.layers2(x)
         return x
