@@ -13,34 +13,20 @@ Características
       "nn"      : 4a saída da mesma rede do estado (modelo_2)
       "fourier" : série de Fourier periódica com período T (modelo_3)
       "bspline" : B-spline (modelo_4; padrão cúbica n=40)
-      "mixfunn" : rede MixFunn de Modelo_5(Mixfunn)/mixfunn.py (modelo_5)
+      "mixfunn" : rede MixFunn (src/mixfunn.py = notebooks/Modelo_5(Mixfunn)/mixfunn.py)
 * Loss = EDO (média nos pontos de colocação) + dados (média) + regularização de
   suavidade do campo  lam_f * (1/T) * integral f''(t)^2 dt  (diferenças finitas).
   O campo verdadeiro NUNCA entra na loss.
 * A loss é exatamente ||r(theta)||^2, onde r é o vetor de resíduos usado pelo LM.
 * Funciona em CPU ou GPU (device = "cuda", "cuda:1", "cpu").
 """
-import os
-import sys
 import math
-import importlib.util
 import numpy as np
 import torch as tc
 from torch.func import functional_call, vmap, jacrev
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.dirname(HERE))          # melhorias/
-import common as cm  # noqa: E402
-
-REPO = os.path.dirname(os.path.dirname(HERE))
-
-
-def _carregar_mixfunn():
-    path = os.path.join(REPO, "Modelo_5(Mixfunn)", "mixfunn.py")
-    spec = importlib.util.spec_from_file_location("mixfunn_repo", path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+import bloch as cm
+import mixfunn as mfmod
 
 
 # ---------------------------------------------------------------------------
@@ -124,7 +110,6 @@ class ProblemaPINN:
         if f in ("fourier", "bspline"):
             L.add("field.c", (self.B_col.shape[1],))
         elif f == "mixfunn":
-            mfmod = _carregar_mixfunn()
             mcfg = cfg.get("mixfunn", dict(N_layers=2, N_neuro=4, second_order_function=True))
             self.mf = mfmod.MixFunn(**mcfg).to(device=self.dev, dtype=dtype)
             for m in self.mf.modules():                  # índices auxiliares no device certo

@@ -1,25 +1,39 @@
 """
 Roda o protocolo em paralelo, de forma retomável.
 
-Cada job (método, caso, ruído, seed) grava um JSON em  <saida>/<perfil>/jobs/.
+Cada job (método, caso, ruído, seed) grava um JSON em  data/resultados/<perfil>/jobs/.
 Se a execução for interrompida, rodar de novo pula os jobs já concluídos.
 
 Exemplos
 --------
   # teste rápido (~5-10 min em CPU)
-  python rodar.py --perfil rapido
+  python run/rodar.py --perfil rapido
 
   # protocolo padrão usando todas as CPUs
-  python rodar.py --perfil padrao --workers 8
+  python run/rodar.py --perfil padrao --workers 8
 
   # GPU: vários processos compartilham a(s) GPU(s); os jobs PINN vão para cuda:0, cuda:1, ...
-  python rodar.py --perfil completo --device cuda --workers 6
+  python run/rodar.py --perfil completo --device cuda --workers 6
 
   # só alguns métodos (filtro por substring)
-  python rodar.py --perfil padrao --metodos lm lsq
+  python run/rodar.py --perfil padrao --metodos lm lsq
 
-Depois:  python relatorio.py --perfil padrao
+Depois:  python run/relatorio.py --perfil padrao
 """
+
+# --- repository layout: src/ and run/ go on the import path, and relative paths
+# --- such as "data/..." are resolved from the repository root. Keep this block in every script.
+import os as _os
+import sys as _sys
+from pathlib import Path as _Path
+
+_HERE = _Path(__file__).resolve().parent if "__file__" in globals() else _Path.cwd()
+_ROOT = next(p for p in (_HERE, *_HERE.parents) if (p / "src").is_dir() and (p / "run").is_dir())
+for _p in (_ROOT / "run", _ROOT / "src", _HERE):
+    if str(_p) not in _sys.path:
+        _sys.path.insert(0, str(_p))
+_os.chdir(_ROOT)
+# ---------------------------------------------------------------------------------
 import os
 import sys
 import json
@@ -27,9 +41,7 @@ import time
 import argparse
 import multiprocessing as mp
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
-import config as C  # noqa: E402
+import protocolo as C
 
 _DEVICE = "cpu"
 
@@ -71,7 +83,7 @@ def main():
     ap.add_argument("--workers", type=int, default=max(1, os.cpu_count() or 1))
     ap.add_argument("--device", default="auto", help="auto | cpu | cuda | cuda:N")
     ap.add_argument("--threads", type=int, default=None, help="threads de CPU por worker")
-    ap.add_argument("--saida", default=os.path.join(HERE, "resultados"))
+    ap.add_argument("--saida", default=os.path.join("data", "resultados"))
     ap.add_argument("--metodos", nargs="*", default=None, help="filtra métodos por substring")
     ap.add_argument("--seeds", type=int, nargs="*", default=None, help="sobrescreve as seeds do perfil")
     ap.add_argument("--refazer", action="store_true", help="refaz jobs já concluídos")

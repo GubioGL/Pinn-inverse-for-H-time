@@ -1,17 +1,11 @@
 """Executa UM job do protocolo: (método, caso, ruído, seed) -> dicionário de resultados."""
-import os
-import sys
 import time
 import math
 import traceback
 import numpy as np
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
-sys.path.insert(0, os.path.dirname(HERE))
-
-import common as cm            # noqa: E402
-import config as C             # noqa: E402
+import bloch as cm
+import protocolo as C
 
 
 def gerar_dados(caso, ruido, seed):
@@ -34,7 +28,7 @@ def _metricas(f_pred, t, data, clean, ffn):
 
 
 def _classico(spec, t, data, T, ruido):
-    import metodos_sem_pinn as msp
+    import classicos as msp
     smooth = ruido > 0
     lam = C.lam_d2(ruido)
     alg = spec["alg"]

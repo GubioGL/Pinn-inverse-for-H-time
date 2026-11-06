@@ -1,15 +1,26 @@
 """Confere dependências, GPU e mede a velocidade de um passo de treino do PINN.
 
-  python verificar_ambiente.py
+  python run/verificar_ambiente.py
 """
+
+# --- repository layout: src/ and run/ go on the import path, and relative paths
+# --- such as "data/..." are resolved from the repository root. Keep this block in every script.
+import os as _os
+import sys as _sys
+from pathlib import Path as _Path
+
+_HERE = _Path(__file__).resolve().parent if "__file__" in globals() else _Path.cwd()
+_ROOT = next(p for p in (_HERE, *_HERE.parents) if (p / "src").is_dir() and (p / "run").is_dir())
+for _p in (_ROOT / "run", _ROOT / "src", _HERE):
+    if str(_p) not in _sys.path:
+        _sys.path.insert(0, str(_p))
+_os.chdir(_ROOT)
+# ---------------------------------------------------------------------------------
 import os
 import sys
 import time
 import platform
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
-sys.path.insert(0, os.path.dirname(HERE))
 
 print("python  ", platform.python_version(), "|", platform.platform())
 for mod in ("numpy", "scipy", "matplotlib", "torch"):
@@ -29,7 +40,7 @@ for i in range(tc.cuda.device_count()):
     p = tc.cuda.get_device_properties(i)
     print(f"   cuda:{i}  {p.name}  {p.total_memory / 2**30:.1f} GB")
 
-import common as cm                 # noqa: E402
+import bloch as cm
 from pinn import ProblemaPINN       # noqa: E402
 import otimizadores as ot           # noqa: E402
 

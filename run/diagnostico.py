@@ -12,18 +12,31 @@ Diagnóstico do problema inverso (sem treinar nada).
 3) Condicionamento: quanto a trajetória muda quando mudamos o campo?
    (valores singulares do Jacobiano trajetória/coeficientes).
 
-Uso:  python diagnostico.py
+Uso:  python run/diagnostico.py   (figuras em paper/figures/)
 """
+
+# --- repository layout: src/ and run/ go on the import path, and relative paths
+# --- such as "data/..." are resolved from the repository root. Keep this block in every script.
+import os as _os
+import sys as _sys
+from pathlib import Path as _Path
+
+_HERE = _Path(__file__).resolve().parent if "__file__" in globals() else _Path.cwd()
+_ROOT = next(p for p in (_HERE, *_HERE.parents) if (p / "src").is_dir() and (p / "run").is_dir())
+for _p in (_ROOT / "run", _ROOT / "src", _HERE):
+    if str(_p) not in _sys.path:
+        _sys.path.insert(0, str(_p))
+_os.chdir(_ROOT)
+# ---------------------------------------------------------------------------------
 import os
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-import common as cm
+import bloch as cm
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-FIG = os.path.join(HERE, "figuras")
+from paths import save_figure
 
 
 def observabilidade():
@@ -46,7 +59,7 @@ def observabilidade():
     axes[0].set_ylabel(r"$Y^2+Z^2$  (sensibilidade a f)")
     axes[0].legend(fontsize=8)
     plt.tight_layout()
-    plt.savefig(os.path.join(FIG, "observabilidade.png"), dpi=130)
+    save_figure(fig, "observabilidade")
     plt.close()
 
 
@@ -113,12 +126,11 @@ def condicionamento():
     plt.ylabel(r"$\|\partial \langle\sigma\rangle / \partial a_\omega\|$")
     plt.title("Sensibilidade dos dados por frequência")
     plt.tight_layout()
-    plt.savefig(os.path.join(FIG, "sensibilidade_frequencia.png"), dpi=130)
+    save_figure(plt.gcf(), "sensibilidade_frequencia")
     plt.close()
 
 
 if __name__ == "__main__":
-    os.makedirs(FIG, exist_ok=True)
     observabilidade()
     capacidade_bases()
     condicionamento()

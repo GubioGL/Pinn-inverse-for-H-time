@@ -32,7 +32,8 @@ import torch as tc
 import torch.nn as nn
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import common as cm  # noqa: E402
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "src"))
+import bloch as cm  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 

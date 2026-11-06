@@ -1,14 +1,28 @@
 """
 Agrega os resultados de um perfil em tabelas e figuras.
 
-  python relatorio.py --perfil padrao
+  python run/relatorio.py --perfil padrao
 
-Gera em resultados/<perfil>/:
+Gera em data/resultados/<perfil>/:
   resumo.csv        (uma linha por método x cenário: média, desvio, mediana, mín, máx)
   RESULTADOS.md     (tabelas em markdown + figuras)
-  fig_erro_*.png    (erro do campo por método, cada ponto é uma seed)
-  fig_campos_*.png  (campo recuperado, seed 0, melhor método de cada família)
+  figuras/fig_erro_*.pdf    (erro do campo por método, cada ponto é uma seed)
+  figuras/fig_campos_*.pdf  (campo recuperado, seed 0, melhor método de cada família)
 """
+
+# --- repository layout: src/ and run/ go on the import path, and relative paths
+# --- such as "data/..." are resolved from the repository root. Keep this block in every script.
+import os as _os
+import sys as _sys
+from pathlib import Path as _Path
+
+_HERE = _Path(__file__).resolve().parent if "__file__" in globals() else _Path.cwd()
+_ROOT = next(p for p in (_HERE, *_HERE.parents) if (p / "src").is_dir() and (p / "run").is_dir())
+for _p in (_ROOT / "run", _ROOT / "src", _HERE):
+    if str(_p) not in _sys.path:
+        _sys.path.insert(0, str(_p))
+_os.chdir(_ROOT)
+# ---------------------------------------------------------------------------------
 import os
 import sys
 import csv
@@ -20,9 +34,6 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
-sys.path.insert(0, os.path.dirname(HERE))
 
 CORES = {"classico": "#6b6b6b", "original": "#d62728", "lbfgs": "#ff7f0e", "bfgs": "#9467bd",
          "ssbfgs": "#8c564b", "lm": "#1f77b4", "lm_causal": "#17becf"}
@@ -120,7 +131,7 @@ def fig_erros(res, linhas, caso, ruido, arq):
                if any(l["familia"] == k for l in ls)]
     ax.legend(handles=handles, fontsize=7, loc="lower right")
     plt.tight_layout()
-    plt.savefig(arq, dpi=120)
+    plt.savefig(arq, bbox_inches="tight")
     plt.close()
 
 
@@ -149,16 +160,17 @@ def fig_campos(res, linhas, caso, ruido, arq):
     axes[-1].set_xlabel("t")
     axes[0].legend(fontsize=7, loc="upper right")
     plt.tight_layout()
-    plt.savefig(arq, dpi=120)
+    plt.savefig(arq, bbox_inches="tight")
     plt.close()
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--perfil", default="padrao")
-    ap.add_argument("--saida", default=os.path.join(HERE, "resultados"))
+    ap.add_argument("--saida", default=os.path.join("data", "resultados"))
     a = ap.parse_args()
     pasta = os.path.join(a.saida, a.perfil)
+    os.makedirs(os.path.join(pasta, "figuras"), exist_ok=True)
     res = carregar(pasta)
     if not res:
         print("nenhum resultado em", pasta)
@@ -175,10 +187,11 @@ def main():
           "## Mediana do erro do campo por cenário\n", tabela_cruzada(linhas, cenarios), ""]
     for c, r in cenarios:
         nome = f"c{c}_r{r:g}"
-        fig_erros(res, linhas, c, r, os.path.join(pasta, f"fig_erro_{nome}.png"))
-        fig_campos(res, linhas, c, r, os.path.join(pasta, f"fig_campos_{nome}.png"))
-        md += [tabela_md(linhas, c, r), f"![erros](fig_erro_{nome}.png)\n",
-               f"![campos](fig_campos_{nome}.png)\n"]
+        fig_erros(res, linhas, c, r, os.path.join(pasta, "figuras", f"fig_erro_{nome}.pdf"))
+        fig_campos(res, linhas, c, r, os.path.join(pasta, "figuras", f"fig_campos_{nome}.pdf"))
+        md += [tabela_md(linhas, c, r),
+               f"Figuras: [erro por seed](figuras/fig_erro_{nome}.pdf) · "
+               f"[campo recuperado](figuras/fig_campos_{nome}.pdf)\n"]
     erros = [r for r in res if r["status"] != "ok"]
     if erros:
         md.append("## Jobs com erro\n")
