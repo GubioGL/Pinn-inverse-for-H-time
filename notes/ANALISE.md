@@ -12,14 +12,64 @@ igual em todos.
 
 ---
 
-## Parte 2 (atualização): protocolo único, estado |0⟩, 5 seeds
+## Por que o estado inicial |0⟩ e não |+⟩ (justificativa)
 
-Código em [`protocolo/`](protocolo/README.md): mesmos dados para todos os métodos, estado inicial
+**1. Observabilidade.** O campo só entra nas equações por $\dot Y = X - fZ$ e $\dot Z = fY$.
+Em cada instante, a "quantidade de informação" sobre $f$ nos dados é proporcional a
+$Y^2+Z^2 = 1-X^2$ (estado puro). O estado $|+\rangle$ tem vetor de Bloch $(1,0,0)$, alinhado
+com $\sigma_x$, que é justamente o operador do controle. Em $t=0$ temos $Y^2+Z^2=0$: qualquer
+$f(0)$ produz os mesmos dados, e o campo não é identificável perto do início.
+
+| caso | fração do tempo com $Y^2+Z^2<0{,}05$: \|+⟩ → \|0⟩ | mínimo de $Y^2+Z^2$: \|+⟩ → \|0⟩ |
+|---|---|---|
+| 1 | 9 % → **0 %** | 0 → **0,38** |
+| 2 | 7 % → **0 %** | 0 → **0,13** |
+| 3 | 4 % → **0 %** | 0 → **0,52** |
+
+Figura: `paper/figures/observabilidade.pdf` (gerada por `run/diagnostico.py`). Com $|0\rangle$,
+$\dot Y(0) = -f(0)$: o campo age sobre o estado desde o primeiro instante.
+
+**2. Consequência nos notebooks originais.** A falta de identificabilidade em $t\approx0$ é,
+muito provavelmente, o motivo de ter sido necessário forçar `f(0)` e `f(T)` com os valores do
+campo verdadeiro na loss. Num problema inverso real esses valores não são conhecidos.
+
+**3. Ganho medido** (Parte 1, mesmo orçamento de medidas):
+
+| medida | \|+⟩ | \|0⟩ |
+|---|---|---|
+| LSQ linear, caso 3, σ = 0,01 (5 realizações) | 0,153 ± 0,053 | **0,069 ± 0,008** |
+| LSQ linear, caso 3, σ = 0,03 | 0,311 ± 0,151 | **0,151 ± 0,023** |
+| shooting, caso 3, σ = 0,01 | 0,093 ± 0,010 | **0,067 ± 0,005** |
+| inversão direta, caso 1, sem ruído | 14 % | **0,13 %** |
+| PINN Parte 1 (L-BFGS float32), caso 3, 3 seeds | 5,1 / 22 / 4,5 % | **1,2 / 2,3 / 3,0 %** |
+
+Além de reduzir o erro, |0⟩ reduz muito a variância entre realizações do ruído.
+
+**4. Ressalvas.**
+- Isso vale quando se mede ⟨σx⟩, ⟨σy⟩ **e** ⟨σz⟩, que é o cenário atual. Com **só** ⟨σz⟩
+  e estado |0⟩, f e −f geram exatamente os mesmos dados (σz H(f) σz = H(−f), σz|0⟩ = |0⟩), e o
+  sinal do campo fica indeterminado. Esse caso está em [`TODO.md`](TODO.md).
+- Um estado genérico, como (1,1,1)/√3, evita as duas armadilhas. Ainda assim ele tem quase
+  zeros de $Y^2+Z^2$ (mínimo 0,018 no caso 1). Usar **vários estados iniciais** com o mesmo
+  campo cobre os pontos cegos de cada um. Esse é um caso futuro, também em [`TODO.md`](TODO.md).
+
+---
+
+## Parte 3 (v2): melhorias pedidas e protocolo atualizado
+
+PARTE3_PLACEHOLDER
+
+---
+
+## Parte 2 (v1): protocolo único, estado |0⟩, 5 seeds
+
+Código em `src/` e `run/` (descrição em [`PROTOCOLO.md`](PROTOCOLO.md)): mesmos dados para todos os métodos, estado inicial
 |0⟩, N = 100, campo verdadeiro fora da loss, 5 seeds, métricas de erro do campo e de RMSE da
 trajetória re-simulada. Roda em paralelo, em CPU ou GPU, e é retomável. Os resultados completos
-estão em [`protocolo/resultados/padrao/RESULTADOS.md`](protocolo/resultados/padrao/RESULTADOS.md)
+estão em [`data/resultados/v1_padrao/RESULTADOS.md`](../data/resultados/v1_padrao/RESULTADOS.md)
 (320 jobs, todos ok, 95 min em 4 núcleos) e
-[`protocolo/resultados/ablacao/RESULTADOS.md`](protocolo/resultados/ablacao/RESULTADOS.md).
+[`data/resultados/v1_ablacao/RESULTADOS.md`](../data/resultados/v1_ablacao/RESULTADOS.md). (Versão 1 do código;
+as figuras PNG desses relatórios não foram mantidas, porque o template só versiona PDF.)
 
 **Mediana do erro do campo (5 seeds):**
 
@@ -43,7 +93,7 @@ O que mudou em relação à Parte 1:
    amortecido) depois de 3000 passos de Adam, o erro no caso 3 cai de ~25 % para 0,10 % (campo
    como rede) e 0,76 % (B-spline). É um ganho de 30–250×. Todos os 5 seeds convergem, e o pior
    fica em 0,21 %. O L-BFGS ganha ~10× e o BFGS denso ~20×. Os pesos causais não ajudaram
-   (detalhes e referências em [`protocolo/METODOS.md`](protocolo/METODOS.md)).
+   (detalhes e referências em [`METODOS.md`](METODOS.md)).
 2. **Com um bom otimizador, o PINN fica no nível dos métodos clássicos ou acima.** No caso 3
    sem ruído, o PINN com campo em rede + LM é o melhor de todos (0,10 % contra 0,16–0,28 % dos
    clássicos), porque a rede não tem o piso de representação da B-spline de 40 funções.
@@ -62,7 +112,7 @@ O que mudou em relação à Parte 1:
    O que o |0⟩ garante é que o campo é observável em todo o intervalo. Assim dá para tirar a
    "cola" `f(0)=f_true(0)` e deixar o otimizador chegar ao campo certo.
 6. **Custo:** o LM leva ~3 min por seed em 1 thread de CPU (Jacobiano por ponto + Cholesky
-   1100×1100). Na GPU esses dois passos devem acelerar bastante. Rode `python verificar_ambiente.py`
+   1100×1100). Na GPU esses dois passos devem acelerar bastante. Rode `python run/verificar_ambiente.py`
    para medir. Os métodos clássicos levam < 1 s.
 
 **Lembrete (próxima etapa):** dados parciais, só ⟨σz⟩. Ver [`TODO.md`](TODO.md). Atenção: com
@@ -73,16 +123,17 @@ então o sinal do campo não é identificável.
 
 ## Parte 1: diagnóstico inicial (estado |+⟩)
 
-Tudo nesta pasta roda em CPU, em minutos:
+Scripts desta parte (rodam em CPU, em minutos):
 
 ```bash
-cd melhorias
-python diagnostico.py          # observabilidade, capacidade das bases, sensibilidade (4 s)
-python metodos_sem_pinn.py     # baselines sem PINN + desenho experimental (~1 min)
-python pinn_melhorado.py --preset completo_f64 # PINN melhorado (~8 min)
-python rodar_ablation.py --seeds 3             # ablation completo (~25 min, 4 núcleos)
-python figura_pinn.py
+python run/diagnostico.py                    # observabilidade, bases, sensibilidade -> paper/figures/
+python run/parte1_classicos.py               # baselines sem PINN + desenho experimental -> data/parte1/
+python notebooks/melhorias_parte1/pinn_melhorado.py --preset completo_f64   # PINN da parte 1
 ```
+
+Os scripts `pinn_melhorado.py`, `rodar_ablation.py` e `figura_pinn.py` da parte 1 foram
+superados pelo protocolo (`src/`, `run/`) e ficaram em `notebooks/melhorias_parte1/` só como
+registro.
 
 ---
 
@@ -124,7 +175,7 @@ Das equações de Bloch, $fZ = X-\dot Y$ e $fY=\dot Z$. A informação sobre f e
 proporcional a $Y^2+Z^2 = 1-X^2$ (estado puro). Quando o vetor de Bloch aponta ao longo de x
 (o eixo do controle), **qualquer** f gera os mesmos dados.
 
-![observabilidade](figuras/observabilidade.png)
+![observabilidade](../notebooks/melhorias_parte1/figuras/observabilidade.png)
 
 | caso | estado inicial | fração do tempo com $Y^2+Z^2<0{,}05$ | mínimo de $Y^2+Z^2$ |
 |---|---|---|---|
@@ -156,7 +207,7 @@ $a\sin\omega t$ muda o estado em ~$a/\omega$:
 | `0.3 cos(3t−0.5)·env` | 20 % | 0,10 |
 | `1.5 sin(2t)·env` | 98 % | 0,94 |
 
-![sensibilidade](figuras/sensibilidade_frequencia.png)
+![sensibilidade](../notebooks/melhorias_parte1/figuras/sensibilidade_frequencia.png)
 
 Isso explica a figura do PINN-Fourier: o campo recuperado é a versão suave do verdadeiro, mas a
 re-simulação no qutip quase coincide com os dados. **Erro pequeno na trajetória não implica campo
@@ -218,7 +269,7 @@ partir do estado atual da rede, e o Adam só otimiza a rede do estado. Está imp
 
 ## 2. Bugs encontrados (corrigidos neste branch)
 
-1. **`modelo_1/main/function.py::Loss_EDO` – sinal errado.**
+1. **`notebooks/modelo_1/main/function.py::Loss_EDO` – sinal errado.**
    $-i[H,\rho]$ tem parte real $[H_r,\rho_i] + [H_i,\rho_r]$. O código tinha `−`.
    Testado numericamente: para H=σx o erro é 0 (H real), para H=σy o erro é 0,57. Qualquer
    Hamiltoniano com σy (ou acoplamentos XY, como nos casos de 2–3 qubits, se reaproveitarem essa
@@ -228,7 +279,7 @@ partir do estado atual da rede, e o Adam só otimiza a rede do estado. Está imp
    física da loss são de Hamiltonianos diferentes. *(Não alterei o notebook; vale corrigir.)*
    Em `main/function.py::data()` com `state=True`, `result` não é definido (o `sesolve` está
    comentado).
-3. **`Modelo_5(Mixfunn)/mixfunn.py::MixFunn.forward`**: `x = self.layers2(x)` estava fora do
+3. **`notebooks/Modelo_5(Mixfunn)/mixfunn.py::MixFunn.forward`**: `x = self.layers2(x)` estava fora do
    `else`, e com `N_layers=1` dá `AttributeError` (a cópia em `5_niveis/` já estava certa).
 4. **Caminhos de saída**: `fourier_pinn_field_3.py` e `mixfunn_pinn_field_3.py` salvavam em
    `modelo 3(Fourier)/…` e `Modelo 5(Mixfunn)/…`, pastas que foram renomeadas com `_`. Os scripts
@@ -250,7 +301,7 @@ desprezível aqui. Com N pequeno ou campos rápidos, prefira passar a função `
 (B-spline n=40 ou Fourier M=10) · (C) *shooting*: simula a equação de Bloch (RK4 + sensibilidades)
 e ajusta c por Levenberg–Marquardt. A dinâmica é satisfeita **exatamente**.
 
-Erro L2 relativo do campo (tabela completa em `resultados_sem_pinn.csv`):
+Erro L2 relativo do campo (tabela completa em `data/parte1/resultados_sem_pinn.csv`):
 
 | caso | r0 | ruído σ | (A) direta | (B) LSQ B-spline | (B) LSQ Fourier10 | (C) shooting |
 |---|---|---|---|---|---|---|
@@ -267,7 +318,7 @@ Erro L2 relativo do campo (tabela completa em `resultados_sem_pinn.csv`):
 
 Tempo: (A) e (B) < 0,15 s, (C) < 1 s.
 
-![sem pinn](figuras/metodos_sem_pinn.png)
+![sem pinn](../notebooks/melhorias_parte1/figuras/metodos_sem_pinn.png)
 
 Observações:
 - Sem ruído, (B) e (C) chegam a ~0,3 % no caso 3. **Este é o patamar que um PINN deveria
@@ -300,7 +351,7 @@ variância entre realizações.
 
 `pinn_melhorado.py`, cada linha acrescenta uma melhoria à anterior. As três primeiras linhas
 são réplicas dos scripts do repositório (mesma rede, lr, épocas, BC). Dados em
-`resultados_pinn/ablation_v2.json` (e `ablation_v1_bug_lbfgs.json` para as linhas sem L-BFGS).
+`notebooks/melhorias_parte1/resultados_pinn/ablation_v2.json` (e `ablation_v1_bug_lbfgs.json` para as linhas sem L-BFGS).
 
 | configuração | erro L2 do campo | RMSE re-sim | tempo/seed |
 |---|---|---|---|
@@ -317,7 +368,7 @@ são réplicas dos scripts do repositório (mesma rede, lr, épocas, BC). Dados 
 | L-BFGS float32, ruído σ=0,01 | 16,8 ± 4,5 % | 7,3e-3 | 4 min |
 | *referência: LSQ linear / shooting (seção 3.1)* | *0,30 % / 0,28 %* | *4e-5* | *< 1 s* |
 
-![pinn ablation](figuras/pinn_ablation.png)
+![pinn ablation](../notebooks/melhorias_parte1/figuras/pinn_ablation.png)
 
 O que os números dizem:
 - **Os três PINNs originais convergem para a mesma resposta suavizada** (22–27 %, com desvio
@@ -362,7 +413,7 @@ O que os números dizem:
    `f(0)=f_true(0)` / `f(T)=f_true(T)`.
 4. **Melhorias do PINN** (seção 1.4): em ordem de impacto medido, **L-BFGS em float64** no
    final, entrada normalizada, IC exata, rede maior, colocação densa e, para bases lineares,
-   **variable projection**. Rodar `python pinn_melhorado.py --preset completo_f64`.
+   **variable projection**. Implementado no protocolo: receitas `lbfgs` e `lm` (Parte 2 e 3).
 5. **Bases**: B-spline cúbica (n≈40) com penalidade de 2ª diferença, ou série de cossenos, no
    lugar de Fourier periódica / B-spline grau 10. Inicializar os coeficientes pelo LSQ linear.
 6. **Ruído realista** (shot noise binomial: $\sigma \approx \sqrt{(1-\langle\sigma\rangle^2)/N_{shots}}$)
@@ -372,7 +423,7 @@ O que os números dizem:
    e PINN/shooting mostram vantagem real. É um caso mais interessante para publicar.
 8. **Shooting/neural-ODE** como 5º método: `qutip_control_jax.py` / `qutip_control_flax.py` já
    começam isso. Em vez de uma NN dentro do `mesolve` (lento), parametrize f por B-spline
-   (40 parâmetros) e use Gauss-Newton/LM, como em `metodos_sem_pinn.py`. Para 2–3 qubits isso
+   (40 parâmetros) e use Gauss-Newton/LM, como em `src/classicos.py`. Para 2–3 qubits isso
    continua barato, porque o Jacobiano tem só nb colunas.
 9. **Resolução espectral**: medir o erro por banda de frequência (FFT do erro) para entender o
    limite de cada método (seção 1.2).
@@ -383,9 +434,9 @@ O que os números dizem:
 
 | arquivo | conteúdo |
 |---|---|
-| `common.py` | geração de dados (Bloch/scipy, confere com qutip em 1e-5), bases (Fourier, cossenos, B-spline), métricas |
-| `diagnostico.py` | observabilidade, capacidade das bases, sensibilidade por frequência |
-| `metodos_sem_pinn.py` | inversão direta, LSQ linear, shooting (multi-estado), estudo de desenho experimental |
-| `pinn_melhorado.py` | PINN com cada melhoria ligável (`--preset`), réplicas dos modelos originais |
-| `rodar_ablation.py` | roda presets × seeds em paralelo → `resultados_pinn/*.json` (`--presets`, `--out`) |
-| `figura_pinn.py` | figura do ablation |
+| `src/bloch.py` (antigo `common.py`) | geração de dados (Bloch/scipy, confere com qutip em 1e-5), bases (Fourier, cossenos, B-spline), métricas |
+| `run/diagnostico.py` | observabilidade, capacidade das bases, sensibilidade por frequência |
+| `src/classicos.py` + `run/parte1_classicos.py` (antigo `metodos_sem_pinn.py`) | inversão direta, LSQ linear, shooting (multi-estado), estudo de desenho experimental |
+| `notebooks/melhorias_parte1/pinn_melhorado.py` | PINN da parte 1 com cada melhoria ligável (`--preset`), réplicas dos modelos originais |
+| `notebooks/melhorias_parte1/rodar_ablation.py` | roda presets × seeds em paralelo |
+| `notebooks/melhorias_parte1/figura_pinn.py` | figura do ablation |
