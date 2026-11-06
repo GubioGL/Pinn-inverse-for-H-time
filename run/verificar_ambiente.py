@@ -48,7 +48,7 @@ t, data, clean, ffn, T = cm.make_data(3, N=100, noise=0.0, seed=0, r0=cm.R0_ZERO
 devs = ["cpu"] + [f"cuda:{i}" for i in range(tc.cuda.device_count())]
 for dev in devs:
     cfg = dict(field="bspline", field_size=40, width=32, depth=3, act="sin", norm_time=True,
-               hard_ic=True, n_col=200, lam_f=1e-10)
+               hard_ic=True, n_rand=200, lam_f=0.0)
     pr = ProblemaPINN(t, data, cm.R0_ZERO, T, cfg, device=dev, dtype=tc.float64)
     th = pr.init_theta(0)
     ot.adam(pr, th, 20)                       # aquecimento

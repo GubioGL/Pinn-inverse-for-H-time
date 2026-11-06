@@ -22,7 +22,17 @@ from scipy.interpolate import BSpline, CubicSpline, make_smoothing_spline
 # Campos usados nos notebooks
 # ---------------------------------------------------------------------------
 def make_case(case):
-    """Retorna (field_fn, tfinal) para os casos 1, 2 e 3 dos notebooks."""
+    """Retorna (field_fn, tfinal).
+
+    1, 2, 3 : campos dos notebooks
+    "w<omega>" (ex. "w6"): pulso de frequência única para o estudo de resolução espectral,
+               f(t) = sin(omega t) sin^2(pi t / T), T = 2.52 pi
+    """
+    if isinstance(case, str) and case.startswith("w"):
+        omega = float(case[1:])
+        tfinal = 2.52 * np.pi
+        return (lambda t: np.sin(omega * t) * np.sin(np.pi * t / tfinal) ** 2), tfinal
+    case = int(case)
     if case == 1:
         tfinal = 2 * np.pi
         return (lambda t: np.cos(t)), tfinal
@@ -35,6 +45,17 @@ def make_case(case):
         return (lambda t: (1.5 * np.sin(2.0 * t) - 0.3 * np.cos(3 * t - 0.5)
                            + 0.4 * np.sin(7.0 * t)) * np.sin(np.pi * t / tfinal) ** 2), tfinal
     raise ValueError(case)
+
+
+def bordas_conhecidas(case):
+    """Valores (f(0), f(T)) conhecidos A PRIORI pelo desenho do pulso, ou None.
+
+    Caso 3 e os pulsos "w<omega>" têm envelope sin^2(pi t/T): o pulso liga e desliga em zero,
+    o que é uma informação do experimento (não do campo a ser descoberto). Nos casos 1 e 2
+    não há essa informação, então nenhuma restrição de borda é imposta ao campo."""
+    if (isinstance(case, str) and case.startswith("w")) or str(case) == "3":
+        return (0.0, 0.0)
+    return None
 
 
 R0_PLUS = np.array([1.0, 0.0, 0.0])      # |+>  (estado usado nos notebooks)

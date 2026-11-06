@@ -27,16 +27,45 @@ def _loss_grad(prob, theta, **kw):
 
 
 def adam(prob, theta, epochs, lr=1e-3, sched="cos", lr_min_frac=1e-2, causal_eps=0.0,
-         log=None, t_max=None):
+         reamostrar=True, varpro=False, pesos_adapt=False, adapt_cada=100, adapt_alpha=0.1,
+         congelar_campo=0.0, log=None, t_max=None):
+    """Adam. A cada época:
+      reamostrar  : sorteia novos pontos de colocação aleatórios (além dos pontos dos dados)
+      varpro      : (campos lineares) coeficientes do campo resolvidos em forma fechada
+      pesos_adapt : peso da loss de dados ajustado pela razão das normas dos gradientes,
+                    w = (1-a) w + a * max|grad L_edo| / mean|grad L_dados|
+                    (Wang, Teng & Perdikaris, SIAM J. Sci. Comput. 2021). O peso volta ao
+                    valor do protocolo no fim do estágio, para os estágios seguintes
+                    minimizarem a mesma função objetivo em todos os métodos.
+      congelar_campo : fração inicial das épocas em que os coeficientes do campo ficam fixos
+                    (campos lineares iniciados por mínimos quadrados): a rede do estado aprende
+                    os dados primeiro, sem "estragar" a boa estimativa inicial do campo.
+    """
     th = theta.detach().clone().requires_grad_(True)
     opt = tc.optim.Adam([th], lr=lr)
     sch = (tc.optim.lr_scheduler.CosineAnnealingLR(opt, epochs, eta_min=lr * lr_min_frac)
            if sched == "cos" else None)
+    w0 = prob.w_data
+    varpro = varpro and prob.linear
+    n_cong = int(congelar_campo * epochs) if prob.linear else 0
+    sl_campo = slice(*(lambda o, k: (o, o + k))(*prob.layout.offset("field.c"))) if prob.linear else None
     t0 = time.time()
     for ep in range(epochs):
+        if reamostrar and prob.n_rand > 0:
+            prob.reamostrar()
+        if varpro:
+            prob.varpro(th.data)
+        if pesos_adapt and ep % adapt_cada == 0:
+            l_ode, l_data, _ = prob.partes(th, causal_eps=causal_eps)
+            g_ode, = tc.autograd.grad(l_ode, th, retain_graph=True)
+            g_dat, = tc.autograd.grad(l_data, th)
+            lam = float(g_ode.abs().max() / (g_dat.abs().mean() + 1e-30))
+            prob.w_data = (1 - adapt_alpha) * prob.w_data + adapt_alpha * lam
         L, parts = prob.loss(th, causal_eps=causal_eps)
         opt.zero_grad(set_to_none=True)
         L.backward()
+        if ep < n_cong:
+            th.grad[sl_campo] = 0.0
         opt.step()
         if sch:
             sch.step()
@@ -44,6 +73,11 @@ def adam(prob, theta, epochs, lr=1e-3, sched="cos", lr_min_frac=1e-2, causal_eps
             log.append(("adam", ep, float(L.detach())))
         if t_max and time.time() - t0 > t_max:
             break
+    if varpro:
+        prob.varpro(th.data)
+    if pesos_adapt and log is not None:
+        log.append(("adam_w_data_final", epochs, prob.w_data))
+    prob.w_data = w0
     return th.detach()
 
 
@@ -135,7 +169,7 @@ def ssbfgs(prob, theta, iters, log=None, t_max=None, tol=1e-18, auto_escala=True
     return x
 
 
-def lm(prob, theta, iters, mu0=1e-3, log=None, t_max=None, patience=30):
+def lm(prob, theta, iters, mu0=1e-3, log=None, t_max=None, patience=30, reamostrar_cada=0):
     """Levenberg-Marquardt com amortecimento de Levenberg (mu I) e a regra de Nielsen
     para mu, baseada na razão entre a redução real e a prevista pelo modelo quadrático."""
     x = theta.detach().clone()
@@ -193,6 +227,12 @@ def lm(prob, theta, iters, mu0=1e-3, log=None, t_max=None, patience=30):
             break
         if t_max and time.time() - t0 > t_max:
             break
+        if reamostrar_cada and prob.n_rand > 0 and (it + 1) % reamostrar_cada == 0:
+            prob.reamostrar()                 # novos pontos de colocação: recalcula a loss
+            r, J = prob.jacobiano(x)
+            L = float(r @ r)
+            stall = 0
+            continue
         r, J = prob.jacobiano(x)
     return x
 
@@ -207,14 +247,18 @@ def treinar(prob, theta, estagios, log=None, t_max_total=None):
         tipo = st["tipo"]
         if tipo == "adam":
             theta = adam(prob, theta, st["epochs"], lr=st.get("lr", 1e-3), sched=st.get("sched", "cos"),
-                         causal_eps=st.get("causal_eps", 0.0), log=log, t_max=restante)
+                         causal_eps=st.get("causal_eps", 0.0), reamostrar=st.get("reamostrar", True),
+                         varpro=st.get("varpro", False), pesos_adapt=st.get("pesos_adapt", False),
+                         congelar_campo=st.get("congelar_campo", 0.0),
+                         log=log, t_max=restante)
         elif tipo == "lbfgs":
             theta = lbfgs(prob, theta, st["iters"], log=log, t_max=restante)
         elif tipo == "ssbfgs":
             theta = ssbfgs(prob, theta, st["iters"], log=log, t_max=restante,
                            auto_escala=st.get("auto_escala", True))
         elif tipo == "lm":
-            theta = lm(prob, theta, st["iters"], mu0=st.get("mu0", 1e-3), log=log, t_max=restante)
+            theta = lm(prob, theta, st["iters"], mu0=st.get("mu0", 1e-3), log=log, t_max=restante,
+                       reamostrar_cada=st.get("reamostrar_cada", 0))
         else:
             raise ValueError(tipo)
     return theta
