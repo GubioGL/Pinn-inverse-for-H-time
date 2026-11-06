@@ -1,0 +1,9 @@
+# Python >= 3.10
+numpy>=1.26
+scipy>=1.11
+matplotlib>=3.8
+# PyTorch >= 2.2 (torch.func). Para GPU NVIDIA instale a versão CUDA, por exemplo:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu124
+torch>=2.2
+# opcional, só para os notebooks antigos do repositório
+# qutip>=5

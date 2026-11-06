@@ -8,3 +8,7 @@ __pycache__/
 .vscode
 .venv
 
+
+# resultados de teste rápido e temporários do protocolo
+melhorias/protocolo/resultados/rapido/
+*.json.tmp
