@@ -12,7 +12,7 @@ Diagnóstico do problema inverso (sem treinar nada).
 3) Condicionamento: quanto a trajetória muda quando mudamos o campo?
    (valores singulares do Jacobiano trajetória/coeficientes).
 
-Uso:  python run/diagnostico.py   (figuras em paper/figures/)
+Uso:  python run/diagnostico.py   (figuras em data/parte1/; as do artigo vêm de run/fig_artigo.py)
 """
 
 # --- repository layout: src/ and run/ go on the import path, and relative paths
@@ -36,7 +36,13 @@ import matplotlib.pyplot as plt
 
 import bloch as cm
 
-from paths import save_figure
+from paths import DATA
+
+
+def save_figure(fig, nome):
+    """Diagnostic figures (part 1) go to data/parte1/, not to the paper."""
+    (DATA / "parte1").mkdir(parents=True, exist_ok=True)
+    fig.savefig(DATA / "parte1" / f"{nome}.pdf", bbox_inches="tight")
 
 
 def observabilidade():

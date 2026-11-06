@@ -1,139 +1,333 @@
-% Bibliography of the paper. Entries checked against the arXiv/publisher listings in Nov 2026;
-% re-check volume/page data against the final versions before submission.
+% Bibliography of the paper and of the supplemental material.
+% Entries marked "% verify" were written from memory and must be checked against the publisher
+% before submission; all the others were checked against arXiv/publisher listings (Nov 2026).
 
+% ---------------------------------------------------------------- PINNs and quantum inverse problems
 @article{raissi2019pinn,
   author  = {Raissi, Maziar and Perdikaris, Paris and Karniadakis, George Em},
   title   = {Physics-informed neural networks: A deep learning framework for solving forward and inverse problems involving nonlinear partial differential equations},
-  journal = {Journal of Computational Physics},
+  journal = {J. Comput. Phys.},
   volume  = {378},
   pages   = {686--707},
   year    = {2019},
   doi     = {10.1016/j.jcp.2018.10.045}
 }
 
-@article{norambuena2024pinnqc,
-  author  = {Norambuena, Ariel and Mattheakis, Marios and Gonz{\'a}lez, Francisco J. and Coto, Ra{\'u}l},
-  title   = {Physics-Informed Neural Networks for Quantum Control},
-  journal = {Physical Review Letters},
-  volume  = {132},
-  pages   = {010801},
-  year    = {2024},
-  doi     = {10.1103/PhysRevLett.132.010801},
-  eprint  = {2206.06287},
-  archivePrefix = {arXiv}
-}
-
-@article{liu2025ipinnhl,
-  author  = {Liu, Jie and Wang, Xin},
-  title   = {Hamiltonian Learning via Inverse Physics-Informed Neural Networks},
-  journal = {Physical Review Research},
-  volume  = {7},
-  pages   = {043137},
-  year    = {2025},
-  eprint  = {2506.10379},
-  archivePrefix = {arXiv}
-}
-
-@misc{farias2025mixfunn,
-  author  = {de Souza Farias, Tiago and de Lima, Gubio Gomes and Maziero, Jonas and Villas-Boas, Celso Jorge},
-  title   = {{MixFunn}: A Neural Network for Differential Equations with Improved Generalization and Interpretability},
-  year    = {2025},
-  eprint  = {2503.22528},
-  archivePrefix = {arXiv}
-}
-
-@article{rathore2024challenges,
-  author  = {Rathore, Pratik and Lei, Weimu and Frangella, Zachary and Lu, Lu and Udell, Madeleine},
-  title   = {Challenges in Training {PINNs}: A Loss Landscape Perspective},
-  journal = {Proceedings of the 41st International Conference on Machine Learning, PMLR},
-  volume  = {235},
-  pages   = {42159--42191},
-  year    = {2024},
-  eprint  = {2402.01868},
-  archivePrefix = {arXiv}
-}
-
-@article{urban2025unveiling,
-  author  = {Urb{\'a}n, Jorge F. and Stefanou, Petros and Pons, Jos{\'e} A.},
-  title   = {Unveiling the optimization process of Physics Informed Neural Networks: How accurate and competitive can {PINNs} be?},
-  journal = {Journal of Computational Physics},
-  year    = {2025},
-  eprint  = {2405.04230},
-  archivePrefix = {arXiv}
-}
-
-@misc{kiyani2025optimizer,
-  author  = {Kiyani, Elham and Shukla, Khemraj and Urb{\'a}n, Jorge F. and Darbon, J{\'e}r{\^o}me and Karniadakis, George Em},
-  title   = {Which Optimizer Works Best for Physics-Informed Neural Networks and {Kolmogorov-Arnold} Networks?},
-  year    = {2025},
-  eprint  = {2501.16371},
-  archivePrefix = {arXiv}
-}
-
-@article{muller2023engd,
-  author  = {M{\"u}ller, Johannes and Zeinhofer, Marius},
-  title   = {Achieving High Accuracy with {PINNs} via Energy Natural Gradient Descent},
-  journal = {Proceedings of the 40th International Conference on Machine Learning, PMLR},
-  volume  = {202},
-  year    = {2023},
-  eprint  = {2302.13163},
-  archivePrefix = {arXiv}
-}
-
-@misc{jnini2024gnngd,
-  author  = {Jnini, Anas and Vella, Flavio and Zeinhofer, Marius},
-  title   = {Gauss-Newton Natural Gradient Descent for Physics-Informed Computational Fluid Dynamics},
-  year    = {2024},
-  eprint  = {2402.10680},
-  archivePrefix = {arXiv}
-}
-
-@misc{jnini2025dual,
-  author  = {Jnini, Anas and Vella, Flavio},
-  title   = {Dual Natural Gradient Descent for Scalable Training of Physics-Informed Neural Networks},
-  year    = {2025},
-  eprint  = {2505.21404},
-  archivePrefix = {arXiv}
-}
-
-@misc{wang2022causality,
-  author  = {Wang, Sifan and Sankaran, Shyam and Perdikaris, Paris},
-  title   = {Respecting causality is all you need for training physics-informed neural networks},
-  year    = {2022},
-  eprint  = {2203.07404},
-  archivePrefix = {arXiv}
-}
-
-@article{wang2021gradient,
-  author  = {Wang, Sifan and Teng, Yujun and Perdikaris, Paris},
-  title   = {Understanding and Mitigating Gradient Flow Pathologies in Physics-Informed Neural Networks},
-  journal = {SIAM Journal on Scientific Computing},
-  volume  = {43},
-  number  = {5},
-  pages   = {A3055--A3081},
+@article{karniadakis2021piml,
+  author  = {Karniadakis, George Em and Kevrekidis, Ioannis G. and Lu, Lu and Perdikaris, Paris and Wang, Sifan and Yang, Liu},
+  title   = {Physics-informed machine learning},
+  journal = {Nat. Rev. Phys.},
+  volume  = {3},
+  pages   = {422--440},
   year    = {2021},
-  doi     = {10.1137/20M1318043}
+  doi     = {10.1038/s42254-021-00314-5}
 }
 
-@article{wang2024multistage,
-  author  = {Wang, Yongji and Lai, Ching-Yao},
-  title   = {Multi-stage neural networks: Function approximator of machine precision},
-  journal = {Journal of Computational Physics},
-  year    = {2024},
-  doi     = {10.1016/j.jcp.2024.112865},
-  eprint  = {2307.08934},
-  archivePrefix = {arXiv}
+@article{lagaris1998,
+  author  = {Lagaris, Isaac E. and Likas, Aristidis and Fotiadis, Dimitrios I.},
+  title   = {Artificial neural networks for solving ordinary and partial differential equations},
+  journal = {IEEE Trans. Neural Netw.},
+  volume  = {9},
+  number  = {5},
+  pages   = {987--1000},
+  year    = {1998},
+  doi     = {10.1109/72.712178}
 }
 
 @article{lu2021hard,
   author  = {Lu, Lu and Pestourie, Rapha{\"e}l and Yao, Wenjie and Wang, Zhicheng and Verdugo, Francesc and Johnson, Steven G.},
   title   = {Physics-Informed Neural Networks with Hard Constraints for Inverse Design},
-  journal = {SIAM Journal on Scientific Computing},
+  journal = {SIAM J. Sci. Comput.},
   volume  = {43},
   number  = {6},
   pages   = {B1105--B1132},
   year    = {2021},
   doi     = {10.1137/21M1397908}
+}
+
+@inproceedings{krishnapriyan2021failure,
+  author    = {Krishnapriyan, Aditi S. and Gholami, Amir and Zhe, Shandian and Kirby, Robert M. and Mahoney, Michael W.},
+  title     = {Characterizing possible failure modes in physics-informed neural networks},
+  booktitle = {Advances in Neural Information Processing Systems},
+  volume    = {34},
+  year      = {2021}
+}
+
+@article{wu2023sampling,
+  author  = {Wu, Chenxi and Zhu, Min and Tan, Qinyang and Kartha, Yadhu and Lu, Lu},
+  title   = {A comprehensive study of non-adaptive and residual-based adaptive sampling for physics-informed neural networks},
+  journal = {Comput. Methods Appl. Mech. Eng.},
+  volume  = {403},
+  pages   = {115671},
+  year    = {2023},
+  doi     = {10.1016/j.cma.2022.115671}
+}
+
+@article{norambuena2024pinnqc,
+  author  = {Norambuena, Ariel and Mattheakis, Marios and Gonz{\'a}lez, Francisco J. and Coto, Ra{\'u}l},
+  title   = {Physics-Informed Neural Networks for Quantum Control},
+  journal = {Phys. Rev. Lett.},
+  volume  = {132},
+  pages   = {010801},
+  year    = {2024},
+  doi     = {10.1103/PhysRevLett.132.010801}
+}
+
+@article{castelano2024freezing,
+  author  = {Castelano, Leonardo K. and Cunha, Iann and Luiz, Fabr{\'\i}cio S. and de Jesus Napolitano, Reginaldo and Prado, Marcos V. S. and Fanchini, Felipe F.},
+  title   = {Combining physics-informed neural networks with the freezing mechanism for general {Hamiltonian} learning},
+  journal = {Phys. Rev. A},
+  volume  = {110},
+  pages   = {032607},
+  year    = {2024},
+  doi     = {10.1103/PhysRevA.110.032607}
+}
+
+@misc{delima2025pinnverse,
+  author        = {de Lima, Gubio G. and Cunha, Iann and Castelano, Leonardo K.},
+  title         = {Inverse Physics-informed neural networks procedure for detecting noise in open quantum systems},
+  year          = {2025},
+  eprint        = {2507.12552},
+  archivePrefix = {arXiv},
+  primaryClass  = {quant-ph}
+}
+
+@article{liu2025ipinnhl,
+  author  = {Liu, Jie and Wang, Xin},
+  title   = {Hamiltonian Learning via Inverse Physics-Informed Neural Networks},
+  journal = {Phys. Rev. Res.},
+  volume  = {7},
+  pages   = {043137},
+  year    = {2025},
+  note    = {arXiv:2506.10379}
+}
+
+@misc{farias2025mixfunn,
+  author        = {de Souza Farias, Tiago and de Lima, Gubio Gomes and Maziero, Jonas and Villas-Boas, Celso Jorge},
+  title         = {{MixFunn}: A Neural Network for Differential Equations with Improved Generalization and Interpretability},
+  year          = {2025},
+  eprint        = {2503.22528},
+  archivePrefix = {arXiv}
+}
+
+% ---------------------------------------------------------------- Hamiltonian learning, control and calibration
+@article{zhang2014identification,
+  author  = {Zhang, Jun and Sarovar, Mohan},
+  title   = {Quantum {Hamiltonian} Identification from Measurement Time Traces},
+  journal = {Phys. Rev. Lett.},
+  volume  = {113},
+  pages   = {080401},
+  year    = {2014},
+  doi     = {10.1103/PhysRevLett.113.080401}
+}
+
+@article{wiebe2014learning,
+  author  = {Wiebe, Nathan and Granade, Christopher and Ferrie, Christopher and Cory, D. G.},
+  title   = {{Hamiltonian} Learning and Certification Using Quantum Resources},
+  journal = {Phys. Rev. Lett.},
+  volume  = {112},
+  pages   = {190501},
+  year    = {2014},
+  doi     = {10.1103/PhysRevLett.112.190501}
+}
+
+@article{gustavsson2013distortion,
+  author  = {Gustavsson, Simon and Zwier, Olger and Bylander, Jonas and Yan, Fei and Yoshihara, Fumiki and Nakamura, Yasunobu and Orlando, Terry P. and Oliver, William D.},
+  title   = {Improving Quantum Gate Fidelities by Using a Qubit to Characterize and Fix Microwave Distortions},
+  journal = {Phys. Rev. Lett.},
+  volume  = {110},
+  pages   = {040502},
+  year    = {2013},
+  doi     = {10.1103/PhysRevLett.110.040502}
+}
+% verify (title wording)
+
+@article{khaneja2005grape,
+  author  = {Khaneja, Navin and Reiss, Timo and Kehlet, Cindie and Schulte-Herbr{\"u}ggen, Thomas and Glaser, Steffen J.},
+  title   = {Optimal control of coupled spin dynamics: design of {NMR} pulse sequences by gradient ascent algorithms},
+  journal = {J. Magn. Reson.},
+  volume  = {172},
+  number  = {2},
+  pages   = {296--305},
+  year    = {2005},
+  doi     = {10.1016/j.jmr.2004.11.004}
+}
+
+@article{bloch1946,
+  author  = {Bloch, Felix},
+  title   = {Nuclear Induction},
+  journal = {Phys. Rev.},
+  volume  = {70},
+  pages   = {460--474},
+  year    = {1946},
+  doi     = {10.1103/PhysRev.70.460}
+}
+
+@book{nielsen2010qcqi,
+  author    = {Nielsen, Michael A. and Chuang, Isaac L.},
+  title     = {Quantum Computation and Quantum Information},
+  edition   = {10th anniversary},
+  publisher = {Cambridge University Press},
+  address   = {Cambridge},
+  year      = {2010}
+}
+
+@article{lindblad1976,
+  author  = {Lindblad, G{\"o}ran},
+  title   = {On the generators of quantum dynamical semigroups},
+  journal = {Commun. Math. Phys.},
+  volume  = {48},
+  pages   = {119--130},
+  year    = {1976},
+  doi     = {10.1007/BF01608499}
+}
+
+@article{gorini1976,
+  author  = {Gorini, Vittorio and Kossakowski, Andrzej and Sudarshan, E. C. G.},
+  title   = {Completely positive dynamical semigroups of {N}-level systems},
+  journal = {J. Math. Phys.},
+  volume  = {17},
+  pages   = {821--825},
+  year    = {1976},
+  doi     = {10.1063/1.522979}
+}
+
+@article{johansson2013qutip,
+  author  = {Johansson, J. R. and Nation, P. D. and Nori, Franco},
+  title   = {{QuTiP} 2: A {Python} framework for the dynamics of open quantum systems},
+  journal = {Comput. Phys. Commun.},
+  volume  = {184},
+  number  = {4},
+  pages   = {1234--1240},
+  year    = {2013},
+  doi     = {10.1016/j.cpc.2012.11.019}
+}
+
+% ---------------------------------------------------------------- approximation of the field
+@article{cybenko1989,
+  author  = {Cybenko, George},
+  title   = {Approximation by superpositions of a sigmoidal function},
+  journal = {Math. Control Signals Syst.},
+  volume  = {2},
+  pages   = {303--314},
+  year    = {1989},
+  doi     = {10.1007/BF02551274}
+}
+
+@article{hornik1989,
+  author  = {Hornik, Kurt and Stinchcombe, Maxwell and White, Halbert},
+  title   = {Multilayer feedforward networks are universal approximators},
+  journal = {Neural Netw.},
+  volume  = {2},
+  number  = {5},
+  pages   = {359--366},
+  year    = {1989},
+  doi     = {10.1016/0893-6080(89)90020-8}
+}
+
+@inproceedings{rahaman2019spectral,
+  author    = {Rahaman, Nasim and Baratin, Aristide and Arpit, Devansh and Draxler, Felix and Lin, Min and Hamprecht, Fred and Bengio, Yoshua and Courville, Aaron},
+  title     = {On the Spectral Bias of Neural Networks},
+  booktitle = {Proceedings of the 36th International Conference on Machine Learning},
+  series    = {PMLR},
+  volume    = {97},
+  pages     = {5301--5310},
+  year      = {2019}
+}
+
+@inproceedings{tancik2020fourier,
+  author    = {Tancik, Matthew and Srinivasan, Pratul P. and Mildenhall, Ben and Fridovich-Keil, Sara and Raghavan, Nithin and Singhal, Utkarsh and Ramamoorthi, Ravi and Barron, Jonathan T. and Ng, Ren},
+  title     = {Fourier Features Let Networks Learn High Frequency Functions in Low Dimensional Domains},
+  booktitle = {Advances in Neural Information Processing Systems},
+  volume    = {33},
+  year      = {2020}
+}
+
+@book{boyd2001spectral,
+  author    = {Boyd, John P.},
+  title     = {Chebyshev and {Fourier} Spectral Methods},
+  edition   = {2nd},
+  publisher = {Dover},
+  address   = {New York},
+  year      = {2001}
+}
+
+@book{deboor2001splines,
+  author    = {de Boor, Carl},
+  title     = {A Practical Guide to Splines},
+  edition   = {Revised},
+  publisher = {Springer},
+  address   = {New York},
+  year      = {2001}
+}
+
+@article{eilers1996psplines,
+  author  = {Eilers, Paul H. C. and Marx, Brian D.},
+  title   = {Flexible smoothing with {B}-splines and penalties},
+  journal = {Stat. Sci.},
+  volume  = {11},
+  number  = {2},
+  pages   = {89--121},
+  year    = {1996},
+  doi     = {10.1214/ss/1038425655}
+}
+
+@misc{liu2024kan,
+  author        = {Liu, Ziming and Wang, Yixuan and Vaidya, Sachin and Ruehle, Fabian and Halverson, James and Solja{\v{c}}i{\'c}, Marin and Hou, Thomas Y. and Tegmark, Max},
+  title         = {{KAN}: {Kolmogorov-Arnold} Networks},
+  year          = {2024},
+  eprint        = {2404.19756},
+  archivePrefix = {arXiv}
+}
+
+% ---------------------------------------------------------------- optimization
+@misc{kingma2015adam,
+  author        = {Kingma, Diederik P. and Ba, Jimmy},
+  title         = {Adam: A Method for Stochastic Optimization},
+  year          = {2015},
+  note          = {ICLR 2015},
+  eprint        = {1412.6980},
+  archivePrefix = {arXiv}
+}
+
+@article{liu1989lbfgs,
+  author  = {Liu, Dong C. and Nocedal, Jorge},
+  title   = {On the limited memory {BFGS} method for large scale optimization},
+  journal = {Math. Program.},
+  volume  = {45},
+  pages   = {503--528},
+  year    = {1989},
+  doi     = {10.1007/BF01589116}
+}
+
+@book{nocedal2006numerical,
+  author    = {Nocedal, Jorge and Wright, Stephen J.},
+  title     = {Numerical Optimization},
+  edition   = {2nd},
+  publisher = {Springer},
+  address   = {New York},
+  year      = {2006}
+}
+
+@article{levenberg1944,
+  author  = {Levenberg, Kenneth},
+  title   = {A method for the solution of certain non-linear problems in least squares},
+  journal = {Q. Appl. Math.},
+  volume  = {2},
+  pages   = {164--168},
+  year    = {1944},
+  doi     = {10.1090/qam/10666}
+}
+
+@article{marquardt1963,
+  author  = {Marquardt, Donald W.},
+  title   = {An Algorithm for Least-Squares Estimation of Nonlinear Parameters},
+  journal = {J. Soc. Ind. Appl. Math.},
+  volume  = {11},
+  number  = {2},
+  pages   = {431--441},
+  year    = {1963},
+  doi     = {10.1137/0111030}
 }
 
 @techreport{nielsen1999damping,
@@ -144,13 +338,118 @@
   year        = {1999}
 }
 
-@article{johansson2013qutip,
-  author  = {Johansson, J. R. and Nation, P. D. and Nori, Franco},
-  title   = {{QuTiP} 2: A {Python} framework for the dynamics of open quantum systems},
-  journal = {Computer Physics Communications},
-  volume  = {184},
-  number  = {4},
-  pages   = {1234--1240},
-  year    = {2013},
-  doi     = {10.1016/j.cpc.2012.11.019}
+@article{golub1973varpro,
+  author  = {Golub, Gene H. and Pereyra, Victor},
+  title   = {The Differentiation of Pseudo-Inverses and Nonlinear Least Squares Problems Whose Variables Separate},
+  journal = {SIAM J. Numer. Anal.},
+  volume  = {10},
+  number  = {2},
+  pages   = {413--432},
+  year    = {1973},
+  doi     = {10.1137/0710036}
 }
+
+@inproceedings{rathore2024challenges,
+  author    = {Rathore, Pratik and Lei, Weimu and Frangella, Zachary and Lu, Lu and Udell, Madeleine},
+  title     = {Challenges in Training {PINNs}: A Loss Landscape Perspective},
+  booktitle = {Proceedings of the 41st International Conference on Machine Learning},
+  series    = {PMLR},
+  volume    = {235},
+  pages     = {42159--42191},
+  year      = {2024}
+}
+
+@article{urban2025unveiling,
+  author  = {Urb{\'a}n, Jorge F. and Stefanou, Petros and Pons, Jos{\'e} A.},
+  title   = {Unveiling the optimization process of Physics Informed Neural Networks: How accurate and competitive can {PINNs} be?},
+  journal = {J. Comput. Phys.},
+  year    = {2025},
+  note    = {arXiv:2405.04230}
+}
+
+@misc{kiyani2025optimizer,
+  author        = {Kiyani, Elham and Shukla, Khemraj and Urb{\'a}n, Jorge F. and Darbon, J{\'e}r{\^o}me and Karniadakis, George Em},
+  title         = {Which Optimizer Works Best for Physics-Informed Neural Networks and {Kolmogorov-Arnold} Networks?},
+  year          = {2025},
+  eprint        = {2501.16371},
+  archivePrefix = {arXiv}
+}
+
+@inproceedings{muller2023engd,
+  author    = {M{\"u}ller, Johannes and Zeinhofer, Marius},
+  title     = {Achieving High Accuracy with {PINNs} via Energy Natural Gradient Descent},
+  booktitle = {Proceedings of the 40th International Conference on Machine Learning},
+  series    = {PMLR},
+  volume    = {202},
+  year      = {2023}
+}
+
+@misc{jnini2024gnngd,
+  author        = {Jnini, Anas and Vella, Flavio and Zeinhofer, Marius},
+  title         = {Gauss-Newton Natural Gradient Descent for Physics-Informed Computational Fluid Dynamics},
+  year          = {2024},
+  eprint        = {2402.10680},
+  archivePrefix = {arXiv}
+}
+
+@misc{jnini2025dual,
+  author        = {Jnini, Anas and Vella, Flavio},
+  title         = {Dual Natural Gradient Descent for Scalable Training of Physics-Informed Neural Networks},
+  year          = {2025},
+  eprint        = {2505.21404},
+  archivePrefix = {arXiv}
+}
+
+@misc{wang2022causality,
+  author        = {Wang, Sifan and Sankaran, Shyam and Perdikaris, Paris},
+  title         = {Respecting causality is all you need for training physics-informed neural networks},
+  year          = {2022},
+  eprint        = {2203.07404},
+  archivePrefix = {arXiv}
+}
+
+@article{wang2021gradient,
+  author  = {Wang, Sifan and Teng, Yujun and Perdikaris, Paris},
+  title   = {Understanding and Mitigating Gradient Flow Pathologies in Physics-Informed Neural Networks},
+  journal = {SIAM J. Sci. Comput.},
+  volume  = {43},
+  number  = {5},
+  pages   = {A3055--A3081},
+  year    = {2021},
+  doi     = {10.1137/20M1318043}
+}
+
+@article{wang2024multistage,
+  author  = {Wang, Yongji and Lai, Ching-Yao},
+  title   = {Multi-stage neural networks: Function approximator of machine precision},
+  journal = {J. Comput. Phys.},
+  year    = {2024},
+  doi     = {10.1016/j.jcp.2024.112865}
+}
+
+% ---------------------------------------------------------------- inverse problems
+@book{hansen2010discrete,
+  author    = {Hansen, Per Christian},
+  title     = {Discrete Inverse Problems: Insight and Algorithms},
+  publisher = {SIAM},
+  address   = {Philadelphia},
+  year      = {2010},
+  doi       = {10.1137/1.9780898718836}
+}
+
+@book{hairer1993ode,
+  author    = {Hairer, Ernst and N{\o}rsett, Syvert P. and Wanner, Gerhard},
+  title     = {Solving Ordinary Differential Equations {I}: Nonstiff Problems},
+  edition   = {2nd},
+  publisher = {Springer},
+  address   = {Berlin},
+  year      = {1993}
+}
+
+@article{okabe2008color,
+  author  = {Okabe, Masataka and Ito, Kei},
+  title   = {Color Universal Design ({CUD}): How to make figures and presentations that are friendly to colorblind people},
+  journal = {J*Fly Data Depository for Drosophila Researchers},
+  year    = {2008}
+}
+% verify (web document, cite only if the journal requires a palette reference)

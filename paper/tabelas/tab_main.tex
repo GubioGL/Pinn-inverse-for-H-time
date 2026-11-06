@@ -1,0 +1,20 @@
+\begin{tabular}{llcccc}
+\toprule
+ & method & field 1 & field 2 & field 3 & field 3, $\sigma=0.01$ \\
+\midrule
+\multirow{5}{*}{\rotatebox{90}{classical}} & direct inversion & $1.3\times10^{-3}$ & $3.0\times10^{-3}$ & $1.6\times10^{-3}$ & $6.9\times10^{-2}$ \\
+ & LSQ, Fourier ($M{=}10$) & $4.1\times10^{-6}$ & $0.16$ & $4.9\times10^{-3}$ & $3.9\times10^{-2}$ \\
+ & LSQ, cosine ($M{=}40$) & $5.6\times10^{-6}$ & $1.6\times10^{-2}$ & $2.5\times10^{-4}$ & $6.5\times10^{-2}$ \\
+ & LSQ, B-spline ($n{=}80$) & $8.6\times10^{-6}$ & $1.2\times10^{-3}$ & $2.5\times10^{-4}$ & $6.7\times10^{-2}$ \\
+ & shooting, B-spline ($n{=}80$) & $2.4\times10^{-5}$ & $3.7\times10^{-3}$ & $1.5\times10^{-4}$ & $5.7\times10^{-2}$ \\
+\midrule
+\multirow{8}{*}{\rotatebox{90}{PINN}} & NN field, Adam only & $5.5\times10^{-3}$$^\dagger$ & $0.22$$^\dagger$ & $0.26$$^\dagger$ & $0.26$$^\dagger$ \\
+ & NN field, Adam + L-BFGS & $7.3\times10^{-3}$$^\dagger$ & $0.14$$^\dagger$ & $3.3\times10^{-2}$$^\dagger$ & $6.0\times10^{-2}$$^\dagger$ \\
+ & NN field, Adam + LM & $3.9\times10^{-5}$ & $3.1\times10^{-3}$ & $2.0\times10^{-3}$ & $5.5\times10^{-2}$$^\dagger$ \\
+ & Fourier ($M{=}10$), Adam + LM & $7.8\times10^{-6}$ & $0.18$ & $5.4\times10^{-3}$ & $4.8\times10^{-2}$$^\dagger$ \\
+ & cosine ($M{=}40$), Adam + LM & $1.3\times10^{-5}$ & $2.4\times10^{-2}$ & $1.9\times10^{-3}$ & -- \\
+ & B-spline ($n{=}80$), Adam + LM & $3.6\times10^{-5}$ & $5.1\times10^{-3}$ & $1.8\times10^{-3}$ & $5.5\times10^{-2}$$^\dagger$ \\
+ & MixFunn, Adam only & $5.3\times10^{-2}$ & $0.89$ & $0.65$ & $0.58$ \\
+ & MixFunn, Adam + LM & $2.7\times10^{-4}$ & $0.13$ & $0.25$ & $0.26$ \\
+\bottomrule
+\end{tabular}

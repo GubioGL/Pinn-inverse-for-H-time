@@ -20,9 +20,12 @@ o código, os dados e o manuscrito ficam juntos, e `paper/` pode ser sincronizad
 │   └── paths.py  caminhos do repositório + save_figure()
 ├── run/          scripts executáveis (benchmark, relatórios, figuras) + requirements.txt
 ├── data/         resultados do benchmark (JSON por job, resumos CSV/MD)
-├── paper/        manuscrito LaTeX (sincronizado com o Overleaf)
-│   ├── main.tex, references.bib
-│   └── figures/  PDFs escritos pelos scripts de run/
+├── paper/        manuscrito LaTeX no formato APS/revtex (sincronizado com o Overleaf)
+│   ├── main.tex            artigo (duas colunas)
+│   ├── supplementary.tex   material suplementar (detalhes técnicos e todos os valores)
+│   ├── references.bib
+│   ├── tabelas/  tabelas .tex geradas por run/tabelas_artigo.py
+│   └── figures/  PDFs gerados por run/fig_artigo.py
 ├── notes/        análises e notas de trabalho (em português)
 │   ├── ANALISE.md     diagnóstico, justificativas (ex.: estado |0⟩) e resultados
 │   ├── PROTOCOLO.md   regras do protocolo, métodos, como rodar
@@ -66,10 +69,20 @@ Tabelas em `data/resultados/padrao/`:
 python run/relatorio.py --perfil padrao
 ```
 
-Figuras do artigo em `paper/figures/`:
+Tabelas e figuras do artigo, em `paper/tabelas/` e `paper/figures/`, sempre a partir dos dados:
+
+```bash
+python run/tabelas_artigo.py
+```
 
 ```bash
 python run/fig_artigo.py
+```
+
+Para compilar localmente, sem o Overleaf (precisa do pacote `revtex`, no TeX Live `texlive-publishers`):
+
+```bash
+cd paper && latexmk -pdf main.tex && latexmk -pdf supplementary.tex
 ```
 
 Os detalhes (perfis, opções, GPU, retomada) estão em [`notes/PROTOCOLO.md`](notes/PROTOCOLO.md).

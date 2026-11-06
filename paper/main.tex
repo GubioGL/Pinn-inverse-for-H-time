@@ -1,235 +1,458 @@
 % =====================================================================================
-% Manuscript (made from GubioGL/paper-template). Figures are written by run/*.py into
-% paper/figures/ through src/paths.py::save_figure. Numbers come from data/resultados/.
-%
-% Journal class: replace the \documentclass line, for example
-%   APS (PRA, PRL, ...): \documentclass[aps,pra,twocolumn,superscriptaddress,10pt]{revtex4-2}
-%                        (put \maketitle after the abstract, use \affiliation, drop \date)
+% Manuscript (made from GubioGL/paper-template), APS two-column format (revtex4-2).
+% Figures: run/fig_artigo.py -> paper/figures/*.pdf.  Tables: run/tabelas_artigo.py ->
+% paper/tabelas/*.tex.  Every number comes from data/resultados/ (see CLAUDE.md).
+% Supplemental material: paper/supplementary.tex (compiled separately).
 % =====================================================================================
-\documentclass[11pt]{article}
+\documentclass[aps,pra,twocolumn,superscriptaddress,10pt,longbibliography,floatfix]{revtex4-2}
 
-\usepackage[margin=2.5cm]{geometry}
 \usepackage{graphicx}
 \usepackage{amsmath,amssymb}
 \usepackage{bm}
 \usepackage{booktabs}
+\usepackage{multirow}
 \usepackage{xcolor}
-\usepackage[numbers,sort&compress]{natbib}
-\usepackage{hyperref}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
 
-\hypersetup{colorlinks=true, linkcolor=blue!50!black, citecolor=blue!50!black, urlcolor=blue!50!black}
-\graphicspath{{figures/}}              % figures written by run/*.py land in paper/figures/
+\graphicspath{{figures/}}
 
 % Working notes: \showtodostrue -> \showtodosfalse hides every \TODO
 \newif\ifshowtodos \showtodostrue
 \newcommand{\TODO}[1]{\ifshowtodos\textcolor{red}{\textbf{[TODO:} #1\textbf{]}}\fi}
 
-\title{Recovering a time-dependent control field from qubit expectation values:\\
-physics-informed neural networks versus classical inversion}
-\author{Gubio G. de Lima\thanks{\TODO{affiliation}. E-mail: \texttt{gubio.gomes@estudante.ufscar.br}}}
-\date{\today}
+\newcommand{\rvec}{\bm r}
+\newcommand{\ef}{\epsilon_f}
+\newcommand{\er}{\epsilon_r}
 
 \begin{document}
-\maketitle
+
+\title{Recovering a time-dependent control field from qubit expectation values:\\
+physics-informed neural networks versus classical inversion}
+
+\author{Gubio G. de Lima}
+\email{gubio.gomes@estudante.ufscar.br}
+\affiliation{Physics Department, Federal University of S\~ao Carlos, 13565-905, S\~ao Carlos, SP, Brazil}
+
+\date{\today}
 
 \begin{abstract}
-We study the inverse problem of recovering an unknown time-dependent control field $f(t)$ of a
-driven qubit, $H=\tfrac12\sigma_z+\tfrac12 f(t)\sigma_x$, from measured expectation values, and compare
-physics-informed neural networks (PINNs) with classical inversion under a single protocol: identical
-data, initial state $|0\rangle$, no access to the true field, five seeds, and two metrics (field error
-and re-simulated trajectory error). PINNs trained with Adam alone, as in common practice, converge to
-an over-smoothed field with $\sim\!25\%$ error regardless of how the field is parametrized (neural
-network, Fourier series, B-splines, MixFunn). A Levenberg--Marquardt stage reduces the error by two
-orders of magnitude (to $\sim\!0.2\%$), which shows that the optimizer, not the representation, is the
-bottleneck. With complete, noiseless measurements, classical linear least squares and shooting with a
-suitable basis remain about ten times more accurate and thousands of times faster
-\TODO{update with the complete benchmark and the noisy case}. We also show why the initial
-state $|+\rangle$, an eigenstate of the control operator, makes the field unidentifiable at early
-times.
+The control field that actually drives a qubit differs from the programmed one, and recovering it from
+measured data is an inverse problem. We recover an unknown time-dependent field $f(t)$ of a driven qubit,
+$H=\tfrac12\sigma_z+\tfrac12 f(t)\sigma_x$, from the time traces of $\langle\sigma_x\rangle$,
+$\langle\sigma_y\rangle$ and $\langle\sigma_z\rangle$, and compare physics-informed neural networks
+(PINNs) with classical estimators under a single protocol: identical data, initial state $|0\rangle$, no
+access to the true field, five random seeds, and two metrics (field error and re-simulated trajectory
+error). Four representations of the field are studied---a neural network, a Fourier series, B-splines
+and the MixFunn architecture---together with a cosine series. PINNs trained with Adam alone, as in
+common practice, converge to an over-smoothed field with $\simeq25\%$ error, whatever the
+representation, while the re-simulated trajectory already agrees with the data. A Levenberg--Marquardt
+(Gauss--Newton) stage after Adam lowers the error by two orders of magnitude, to $\simeq0.2\%$: the
+optimizer, not the representation, is the bottleneck. With complete and noiseless data, classical linear
+least squares and shooting with a cubic B-spline basis remain about ten times more accurate and
+thousands of times faster; with noise, all good methods are limited by the information in the data. We
+also show that an initial state aligned with the control axis makes the field unidentifiable, and we
+identify analogous blind states and symmetries for a two-qubit exchange coupling and for partial
+measurements, which define where PINNs can be expected to help.
+\TODO{co-authors and affiliations; update numbers when the benchmark is complete}
 \end{abstract}
 
-% -------------------------------------------------------------------------------------
+\maketitle
+
+% =====================================================================================
 \section{Introduction}\label{sec:intro}
-Physics-informed neural networks (PINNs)~\cite{raissi2019pinn} have been used for quantum
-control~\cite{norambuena2024pinnqc} and for learning time-independent Hamiltonian
-parameters~\cite{liu2025ipinnhl}. Here we study the inverse problem of recovering an unknown
-\emph{time-dependent} control field from the measured expectation values of a driven qubit, and we
-ask a simple question: under a single, fair protocol, when do PINNs beat classical inversion?
-Recovering a control field from measurements is relevant for calibrating and characterizing
-quantum devices, where the pulse that actually reaches the qubit differs from the programmed one
-\TODO{add references on pulse characterization}. Earlier PINN studies of this kind of problem
-compare a single model against the ground truth. Here we compare several field parametrizations and
-optimizers against classical estimators that use the same data. Section~\ref{sec:problem} states the
-problem and analyses its identifiability, Sec.~\ref{sec:methods} describes the methods and the
-protocol, Sec.~\ref{sec:results} presents the results, and Sec.~\ref{sec:conclusions} concludes.
 
-Contributions:
-\begin{itemize}
-  \item a single protocol (same data, same initial state, no access to the true field, 5 seeds,
-        two metrics) that compares four field parametrizations---neural network, periodic Fourier
-        series, cosine series and B-splines, plus MixFunn~\cite{farias2025mixfunn}---and classical
-        inversion (direct, linear least squares, shooting);
-  \item an identifiability analysis that explains why the choice of initial state matters
-        (Sec.~\ref{sec:identifiability});
-  \item evidence that the optimizer, not the parametrization, limits PINN accuracy here: a
-        Levenberg--Marquardt (Gauss--Newton) stage improves the field error by one to two orders of
-        magnitude over Adam, in line with recent work on second-order PINN
-        training~\cite{rathore2024challenges,urban2025unveiling,kiyani2025optimizer,muller2023engd,jnini2024gnngd};
-  \item a spectral-resolution study: the error as a function of the frequency of the field \TODO{run}.
-\end{itemize}
+Quantum gates are implemented by time-dependent control fields, and the field that reaches the qubit
+is distorted by the transfer function of the control lines, by crosstalk and by drifts of the device
+parameters~\cite{gustavsson2013distortion}. Characterizing the dynamics from measured data---Hamiltonian
+learning---is therefore a central task in the calibration of quantum hardware
+\cite{zhang2014identification,wiebe2014learning}. When the unknown is a whole function of time, rather
+than a few constant parameters, the task becomes an inverse problem for a differential equation: find
+$f(t)$ such that the solution of the equation of motion reproduces the measured expectation values.
 
-% -------------------------------------------------------------------------------------
-\section{Problem}\label{sec:problem}
-The qubit evolves under
+Physics-informed neural networks (PINNs)~\cite{raissi2019pinn,karniadakis2021piml} solve such inverse
+problems by representing the solution with a neural network and penalizing the residual of the
+governing equation together with the misfit to the data. In quantum physics, PINNs have been used to
+design control fields~\cite{norambuena2024pinnqc}, to learn general two-qubit Hamiltonians with a
+freezing mechanism~\cite{castelano2024freezing}, to identify Hamiltonian parameters and decay rates of
+open systems~\cite{delima2025pinnverse}, and to approach the Heisenberg limit in Hamiltonian
+learning~\cite{liu2025ipinnhl}. In these works the unknowns are constant parameters or the field is a
+design variable; recovering an \emph{unknown time-dependent} field from data, and assessing how a PINN
+compares with the estimators that a physicist would use first, has received less attention.
+
+Two facts make such a comparison necessary. First, PINN losses are ill-conditioned, and first-order
+optimizers such as Adam often stop far from the minimum~\cite{krishnapriyan2021failure,rathore2024challenges};
+quasi-Newton and Gauss--Newton methods have recently been shown to improve PINN accuracy by orders of
+magnitude~\cite{urban2025unveiling,kiyani2025optimizer,muller2023engd,jnini2024gnngd,jnini2025dual}.
+A disappointing PINN result may therefore reflect the optimizer rather than the method. Second, when
+all components of the Bloch vector are measured, the field can also be estimated by classical means:
+pointwise inversion, linear least squares on a basis, or shooting~\cite{hansen2010discrete}.
+
+Here we compare, under a single protocol, PINNs with four representations of the field---a neural
+network, a Fourier series, B-splines~\cite{deboor2001splines} and MixFunn~\cite{farias2025mixfunn}---and
+a cosine series, trained with several optimizers, against classical estimators. Our main findings are:
+(i)~an initial state aligned with the control axis makes the field unidentifiable at early times, which
+we avoid by preparing $|0\rangle$; (ii)~Adam-only PINNs converge to an over-smoothed field for every
+representation, while a Levenberg--Marquardt (LM) stage lowers the field error by two orders of
+magnitude; (iii)~with complete noiseless data, classical estimators with a good basis remain more
+accurate and much cheaper, and with noise all good methods are limited by the data. We close by
+identifying the blind states and symmetries of two harder settings---a two-qubit exchange coupling and
+partial measurements---where PINNs can be expected to be useful.
+
+Section~\ref{sec:problem} states the problem and analyzes its identifiability.
+Section~\ref{sec:representations} describes the representations of the field and
+Sec.~\ref{sec:methods} the estimators and the protocol. Results for the three test fields are presented
+in Sec.~\ref{sec:results}, the outlook in Sec.~\ref{sec:outlook}, and conclusions in
+Sec.~\ref{sec:conclusions}. Implementation details and all numerical values are given in the
+Supplemental Material (SM).
+
+% =====================================================================================
+\section{Problem and identifiability}\label{sec:problem}
+
+\subsection{Driven qubit}
+We consider a qubit driven by an unknown field $f(t)$,
 \begin{equation}
   H(t) = \tfrac12\,\sigma_z + \tfrac12\, f(t)\,\sigma_x ,
+  \label{eq:H}
 \end{equation}
-and the Bloch vector $\bm r = (X,Y,Z) = (\langle\sigma_x\rangle,\langle\sigma_y\rangle,\langle\sigma_z\rangle)$
-obeys
-\begin{equation}\label{eq:bloch}
+in units where $\hbar=1$ and the qubit splitting is one, so that time is measured in units of the
+inverse splitting. The Bloch vector $\rvec=(X,Y,Z)=(\langle\sigma_x\rangle,\langle\sigma_y\rangle,
+\langle\sigma_z\rangle)$ obeys the Bloch equations~\cite{bloch1946,nielsen2010qcqi}
+$\dot{\rvec} = \bm\Omega(t)\times\rvec$ with $\bm\Omega=(f,0,1)$, i.e.,
+\begin{equation}
   \dot X = -Y,\qquad \dot Y = X - f Z,\qquad \dot Z = f Y .
+  \label{eq:bloch}
 \end{equation}
-Given $N=100$ equally spaced measurements of $\bm r(t_i)$ on $[0,T]$, possibly with Gaussian noise of
-standard deviation $\sigma$, we want $f(t)$.
-Test fields: (1) $f=\cos t$, $T=2\pi$; (2) $f = 1.5\sin 2t + 0.8\cos(3.5t+0.5) + 0.4\sin 7t$, $T=2.52\pi$;
-(3) $f = [1.5\sin 2t - 0.3\cos(3t-0.5) + 0.4\sin 7t]\,\sin^2(\pi t/T)$, $T=2.52\pi$;
-and, for the spectral study, single-tone pulses $f=\sin(\omega t)\sin^2(\pi t/T)$.
+The data are $N=100$ equally spaced samples $\rvec_i=\rvec(t_i)+\bm\eta_i$ on $[0,T]$, with Gaussian noise
+$\bm\eta_i$ of standard deviation $\sigma$. We use three test fields [Fig.~\ref{fig:problem}(a)--(c)]:
+field~1, $f=\cos t$ with $T=2\pi$, a single harmonic; field~2,
+$f=1.5\sin2t+0.8\cos(3.5t+0.5)+0.4\sin7t$ with $T=2.52\pi$, which is not periodic on $[0,T]$; and
+field~3, the same kind of three-tone signal multiplied by the envelope $\sin^2(\pi t/T)$, a smooth pulse
+that starts and ends at zero.
 
 \subsection{Identifiability and choice of the initial state}\label{sec:identifiability}
-The field enters Eq.~\eqref{eq:bloch} only through $fZ = X-\dot Y$ and $fY=\dot Z$, so the information
-on $f(t)$ carried by the data is proportional to $Y^2+Z^2 = 1-X^2$. The state $|+\rangle$, an
-eigenstate of the control operator $\sigma_x$, gives $Y^2+Z^2=0$ at $t=0$: there the field has no
-effect on the state and cannot be identified. With $|0\rangle$, $\dot Y(0) = -f(0)$ and
-$Y^2+Z^2 \geq 0.13$ over the whole interval for the three test fields (Fig.~\ref{fig:observability}).
-We therefore use $|0\rangle$ throughout. With the same measurement budget this halves the error of
-the classical estimators and reduces its spread across noise realizations
-(from $0.15\pm0.05$ to $0.07\pm0.01$ for linear least squares at $\sigma=0.01$, five noise
-realizations; \texttt{data/parte1/resultados\_desenho\_experimental.csv}). With only $\langle\sigma_z\rangle$ measured, however, $|0\rangle$ makes
-$f$ and $-f$ indistinguishable, because $\sigma_z H(f)\sigma_z = H(-f)$.
+The field enters Eq.~\eqref{eq:bloch} only through $fZ=X-\dot Y$ and $fY=\dot Z$. At each instant,
+the least-squares solution of these two equations is
+\begin{equation}
+  f(t) = \frac{Z\,(X-\dot Y) + Y\,\dot Z}{Y^2+Z^2},
+  \label{eq:direct}
+\end{equation}
+and the sensitivity of the dynamics to $f$ is $\|\partial\dot{\rvec}/\partial f\|^2 = Y^2+Z^2 = 1-X^2$
+for a pure state. When the Bloch vector points along the control axis $\sigma_x$, the field has no
+effect and cannot be identified. The state $|+\rangle$, $\rvec=(1,0,0)$, is the worst possible choice: at
+$t=0$ the data carry no information about $f$. With $|0\rangle$, instead, $\dot Y(0)=-f(0)$ and
+$Y^2+Z^2\ge0.13$ over the whole interval for the three test fields [Fig.~\ref{fig:problem}(g)--(i)].
+With the same measurement budget, preparing $|0\rangle$ instead of $|+\rangle$ halves the error of the
+classical estimators and strongly reduces its spread over noise realizations (Table~S3 of the SM). We
+use $|0\rangle$ throughout.
 
-\begin{figure}[t]
+Two further properties limit what can be recovered. The map $f\mapsto\rvec$ is smoothing: a perturbation
+$a\sin\omega t$ of the field changes the trajectory by an amount that decays as $1/\omega$
+(Fig.~S1), so the high-frequency content of $f$ is weakly encoded in the data and is the first casualty
+of noise or of an inaccurate fit. And with partial data the problem may have exact symmetries: because
+$\sigma_z H(f)\sigma_z=H(-f)$ and $\sigma_z|0\rangle=|0\rangle$, the fields $f$ and $-f$ produce
+identical $\langle\sigma_z\rangle(t)$ (Sec.~\ref{sec:partial}).
+
+\begin{figure*}[t]
   \centering
-  \includegraphics[width=\linewidth]{observabilidade.pdf}
-  \caption{$Y^2+Z^2$, the sensitivity of the data to the field, for three initial states.
-  Produced by \texttt{run/diagnostico.py}.}
-  \label{fig:observability}
-\end{figure}
+  \includegraphics[width=\textwidth]{fig1_problem.pdf}
+  \caption{The inverse problem. (a)--(c)~Test fields. (d)--(f)~Bloch-vector components for the
+  initial state $|0\rangle$, which are the data (without noise). (g)--(i)~Sensitivity of the data to
+  the field, $Y^2+Z^2=1-X^2$, for three initial states: with $|+\rangle$, an eigenstate of the control
+  operator $\sigma_x$, it vanishes at $t=0$ and repeatedly afterwards, while with $|0\rangle$ it stays
+  above $0.13$.}
+  \label{fig:problem}
+\end{figure*}
 
-% -------------------------------------------------------------------------------------
-\section{Methods}\label{sec:methods}
+% =====================================================================================
+\section{Representations of the field}\label{sec:representations}
 
-\paragraph{Field parametrizations.} (i) Fourth output of the state network; (ii) periodic Fourier
-series with period $T$ and $M=10$ harmonics; (iii) cosine series $\sum_{n=0}^{40} c_n\cos(n\pi t/T)$,
-which has no Gibbs phenomenon when $f(0)\neq f(T)$; (iv) cubic B-splines with 80 uniform basis
-functions; (v) MixFunn~\cite{farias2025mixfunn}.
+All estimators below search for $f$ in a family $\{f_{\bm\theta}\}$. The choice of family fixes which
+fields can be represented, how smooth the estimate is, and whether the problem is linear in the
+parameters. We study four representations used in the PINN literature, plus a cosine series that
+removes a known defect of the Fourier series.
 
-\paragraph{PINN.} A network $\mathrm{NN}(s)$ with input $s=2t/T-1$ represents the state, with the
-initial condition imposed exactly, $\bm r(t) = \bm r_0 + (t/T)\,\mathrm{NN}(s)$. When the pulse is
-known to start and end at zero (field~3 and the spectral pulses), the field is constrained exactly
-as well, $f = g - (1-\tau)g(0) - \tau g(T)$ with $\tau=t/T$ and $g$ the unconstrained
-parametrization~\cite{lu2021hard}. The loss is the sum of the mean squared residual of
-Eq.~\eqref{eq:bloch} over collocation points, the mean squared data misfit and, for noisy data, a
-smoothness penalty $\lambda_f T^{-1}\int f''^2\,dt$. Collocation points are the data points plus 200
-uniform random points redrawn at every Adam epoch. Time derivatives are computed in forward mode
-inside the network. The coefficients of linear parametrizations are initialized by linear least
-squares on the data.
+\paragraph{Neural network.}
+The field is an output of a fully connected network, $f_{\bm\theta}(t)=\mathcal N_{\bm\theta}(t)$. By
+the universal approximation theorem~\cite{cybenko1989,hornik1989}, such networks can represent any
+continuous field on $[0,T]$, and the representation adapts its resolution to the data without a
+predefined grid. Gradient-trained networks, however, learn low frequencies first (spectral
+bias)~\cite{rahaman2019spectral}, which is precisely the regime where the data are least sensitive
+(Sec.~\ref{sec:identifiability}); input embeddings such as Fourier features mitigate this
+bias~\cite{tancik2020fourier}. As in the original inverse PINN~\cite{raissi2019pinn}, we let the field
+be an extra output of the network that represents the state, so that state and field share their hidden
+layers.
 
-\paragraph{Optimization.} 3000 Adam steps (cosine schedule), followed by L-BFGS, dense BFGS, or
-Levenberg--Marquardt (LM) with Nielsen's damping update~\cite{nielsen1999damping}. Because the loss is
-exactly $\|\bm\rho(\theta)\|^2$ for a residual vector $\bm\rho$, the LM step is a Gauss--Newton step
-in the sense of~\cite{muller2023engd,jnini2024gnngd}; when parameters outnumber residuals it is solved
-in residual space~\cite{jnini2025dual}. We also tested causal weights~\cite{wang2022causality},
-gradient-norm loss balancing~\cite{wang2021gradient} and variable projection.
+\paragraph{Fourier and cosine series.}
+A truncated Fourier series,
+$f(t)=a_0+\sum_{m=1}^{M}[a_m\cos(2\pi mt/T)+b_m\sin(2\pi mt/T)]$, converges spectrally fast for smooth
+\emph{periodic} functions~\cite{boyd2001spectral}. If $f(0)\neq f(T)$, its periodic extension is
+discontinuous and the series suffers from the Gibbs phenomenon: convergence becomes algebraically slow
+and the error concentrates at the edges~\cite{boyd2001spectral}. The cosine series
+$f(t)=\sum_{m=0}^{M}c_m\cos(m\pi t/T)$ represents the even extension of $f$ to period $2T$, which is
+continuous for any $f$, and avoids this problem. The maximum frequency of the two series is fixed by $M$
+($2\pi M/T$ and $\pi M/T$, respectively).
 
-\paragraph{Classical baselines.} Direct pointwise inversion $f = [Z(X-\dot Y)+Y\dot Z]/(Y^2+Z^2)$ with
-spline derivatives; linear least squares for the coefficients of a basis; and shooting:
-Bloch-equation integration with sensitivities and LM on the data misfit, initialized by least squares.
+\paragraph{B-splines.}
+A spline of degree $k$ is a piecewise polynomial with $k-1$ continuous derivatives at the knots; it can
+be written as $f(t)=\sum_{j=1}^{n}c_jB_{j,k}(t)$ in the B-spline basis, computed by the Cox--de Boor
+recursion~\cite{deboor2001splines}. B-splines have local support ($k+1$ knot intervals), form a
+partition of unity, and approximate smooth functions with error $O(h^{k+1})$ for a knot spacing
+$h$~\cite{deboor2001splines}. Smoothness can be controlled by penalizing differences of neighbouring
+coefficients (P-splines)~\cite{eilers1996psplines}. B-splines are also the building block of
+Kolmogorov--Arnold networks~\cite{liu2024kan}, recently trained as physics-informed
+models~\cite{kiyani2025optimizer}. We use cubic splines ($k=3$) with open uniform knots.
 
-\paragraph{Protocol.} Identical data for all methods per (field, noise, seed); initial state
-$|0\rangle$; the true field never enters a loss or a hyper-parameter choice (regularization weights
-are fixed a priori by the noise level); five seeds; two metrics: relative $L_2$ error of the field
-and the RMS error of the trajectory re-simulated with the recovered field. Code:
-\texttt{src/}, \texttt{run/rodar.py}.
+\paragraph{MixFunn.}
+MixFunn~\cite{farias2025mixfunn} is a network whose neurons apply a dictionary of functions
+($\sin$, $\cos$, $e^{-0.01|x|}$ and the identity) to linear projections of their input and mix them
+with learnable weights; second-order neurons add products of these functions. The resulting models
+are compact and can be converted into closed-form expressions, which makes them attractive when the
+field is expected to be a combination of a few elementary functions.
 
-% -------------------------------------------------------------------------------------
+\paragraph{Linear and nonlinear representations.}
+The Fourier, cosine and B-spline representations are linear in their coefficients, $f=\mathsf B\bm c$,
+whereas the network and MixFunn are not. This difference matters: for a given trajectory, the residual
+of Eq.~\eqref{eq:bloch} is linear in $\bm c$, so the optimal coefficients follow from a linear
+least-squares problem. This enables the classical estimators of Sec.~\ref{sec:classical}, a
+least-squares initialization of the PINN, and variable projection~\cite{golub1973varpro}.
+
+% =====================================================================================
+\section{Estimation methods}\label{sec:methods}
+
+\subsection{Physics-informed neural network}\label{sec:pinn}
+A network $\mathcal N_{\bm\theta}(s)$ with sine activations and normalized input $s=2t/T-1$ represents
+the state through
+\begin{equation}
+  \rvec_{\bm\theta}(t) = \rvec_0 + \frac{t}{T}\,\mathcal N_{\bm\theta}(s),
+  \label{eq:hardic}
+\end{equation}
+which satisfies the initial condition exactly~\cite{lagaris1998,lu2021hard,norambuena2024pinnqc}. When
+the values $a=f(0)$ and $b=f(T)$ are known from the design of the pulse (field~3 starts and ends at
+zero), they are also imposed exactly,
+$f(t)=g(t)-(1-\tau)g(0)-\tau g(T)+(1-\tau)a+\tau b$ with $\tau=t/T$ and $g$ the unconstrained
+representation; this transformation is linear in $g$ and therefore preserves the linearity of the basis
+representations. The loss is
+\begin{multline}
+  \mathcal L(\bm\theta) = \frac{1}{|\mathcal C|}\sum_{t\in\mathcal C}
+    \big\|\dot{\rvec}_{\bm\theta}-\bm\Omega_{\bm\theta}\times\rvec_{\bm\theta}\big\|^2 \\
+  + \frac{w}{N}\sum_{i=1}^{N}\big\|\rvec_{\bm\theta}(t_i)-\rvec_i\big\|^2
+  + \frac{\lambda_f}{T}\int_0^T \big(f_{\bm\theta}''\big)^2 dt ,
+  \label{eq:loss}
+\end{multline}
+where the collocation set $\mathcal C$ contains the $N$ data times and 200 uniform random times redrawn
+at every Adam epoch~\cite{wu2023sampling,norambuena2024pinnqc}, $w=1$, and the smoothness weight
+$\lambda_f$ is fixed a priori by the noise level ($\lambda_f=0$ without noise). Time derivatives are
+propagated through the layers in forward mode, $\dot{\bm h}_{l+1}=\sigma'(\mathsf W_l\bm h_l+\bm b_l)
+\odot\mathsf W_l\dot{\bm h}_l$, which is exact and cheaper than nested automatic differentiation. The
+loss is exactly the squared norm of a residual vector, $\mathcal L=\|\bm\rho(\bm\theta)\|^2$.
+
+\subsection{Optimization}\label{sec:optimization}
+All PINNs start with $3000$ Adam steps~\cite{kingma2015adam}. For comparison, we also reproduce the
+common practice of training with Adam alone (smaller network, raw time input, residual at the data
+points only, constant learning rate, single precision). After Adam, a second-order stage is applied:
+L-BFGS~\cite{liu1989lbfgs}, a dense BFGS update with or without self-scaling~\cite{nocedal2006numerical,
+urban2025unveiling,kiyani2025optimizer}, or the LM method~\cite{levenberg1944,marquardt1963},
+\begin{equation}
+  \delta\bm\theta = -\big(\mathsf J^{\top}\mathsf J+\mu\mathsf I\big)^{-1}\mathsf J^{\top}\bm\rho
+                  = -\mathsf J^{\top}\big(\mathsf J\mathsf J^{\top}+\mu\mathsf I\big)^{-1}\bm\rho ,
+  \label{eq:lm}
+\end{equation}
+with $\mathsf J=\partial\bm\rho/\partial\bm\theta$ and the damping $\mu$ updated by Nielsen's
+rule~\cite{nielsen1999damping}. LM is a damped Gauss--Newton method; in the PINN context the
+Gauss--Newton direction coincides with the energy natural gradient~\cite{muller2023engd,jnini2024gnngd},
+and the second form of Eq.~\eqref{eq:lm}, used when parameters outnumber residuals, is its
+residual-space version~\cite{jnini2025dual}. The Jacobian is assembled from per-point Jacobians, at a
+cost proportional to the number of points times the number of parameters. We also tested causal
+weights~\cite{wang2022causality}, gradient-norm loss balancing~\cite{wang2021gradient} and variable
+projection. \TODO{ablation results (profile \texttt{ablacao}); SM}
+
+\subsection{Classical estimators}\label{sec:classical}
+\emph{Direct inversion} evaluates Eq.~\eqref{eq:direct} with derivatives of an interpolating cubic
+spline (or of a smoothing spline with the smoothing parameter chosen by generalized cross-validation for
+noisy data~\cite{hansen2010discrete}). \emph{Linear least squares} (LSQ) minimizes the residual of the
+second and third Eqs.~\eqref{eq:bloch} over the coefficients of a basis, with the same spline
+derivatives and a second-difference penalty $\lambda\|\mathsf D_2\bm c\|^2$ for noisy
+data~\cite{eilers1996psplines,hansen2010discrete}. \emph{Shooting} integrates Eq.~\eqref{eq:bloch} for
+a B-spline field (fourth-order Runge--Kutta with forward sensitivities~\cite{hairer1993ode}) and fits the
+coefficients to the data with LM, starting from the LSQ solution; it is the estimation counterpart of
+gradient-based pulse design~\cite{khaneja2005grape} and, unlike the PINN, satisfies the dynamics exactly.
+
+\subsection{Benchmark protocol}\label{sec:protocol}
+All methods use the same data for each field, noise level and seed; the true field never enters a loss
+or the choice of a hyper-parameter; regularization weights depend only on the noise level; every
+configuration is run with five seeds, which set the network initialization, the noise realization and
+the random collocation points. We report the relative error of the field on the data grid,
+$\ef=\|f_{\rm pred}-f\|_2/\|f\|_2$, and the RMS error of the trajectory re-simulated with $f_{\rm pred}$,
+$\er$. Each PINN run is limited to 420~s on one CPU thread. All settings are listed in the SM.
+
+% =====================================================================================
 \section{Results}\label{sec:results}
 
+\begin{table*}[t]
+  \caption{Median relative field error $\ef$ over five seeds. LSQ: linear least squares. $^\dagger$Not yet
+  available in the current protocol; value from an earlier protocol with a fixed collocation grid, 40
+  B-splines and no edge constraint (see SM). \TODO{complete benchmark (180 of 440 runs missing)}}
+  \label{tab:main}
+  \centering
+  \input{tabelas/tab_main.tex}
+\end{table*}
+
+Table~\ref{tab:main} summarizes the median field error of the main methods. Figures~\ref{fig:field1}--%
+\ref{fig:field3} show, for each field, the recovered field, its pointwise error, and both metrics for
+every method; per-seed results and run times are given in the SM.
+
+\subsection{Field 1: a single harmonic}\label{sec:field1}
+For $f=\cos t$ all linear representations contain the exact field, and every estimator that optimizes
+well reaches errors of $10^{-5}$--$10^{-4}$ (Fig.~\ref{fig:field1}): $4\times10^{-6}$ for LSQ with
+the Fourier basis, $1$--$4\times10^{-5}$ for the PINN with a Levenberg--Marquardt stage. MixFunn, whose
+dictionary contains $\cos$, reaches $3\times10^{-4}$. The Adam-only PINN stops at $5\times10^{-3}$:
+even in the easiest case it is limited by the optimizer. Direct inversion is limited to $10^{-3}$ by the
+spline derivatives near the edges.
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\textwidth]{fig2_field1.pdf}
+  \caption{Field~1, $f=\cos t$, without noise. (a)~True field and estimates (seed 0); (b)~pointwise
+  error; (c)~median field error $\ef$ versus median trajectory error $\er$ for every method (colour:
+  optimizer; marker: field representation). $^\dagger$Earlier protocol (see Table~\ref{tab:main}).}
+  \label{fig:field1}
+\end{figure*}
+
+\subsection{Field 2: a non-periodic multi-harmonic field}\label{sec:field2}
+Field~2 does not satisfy $f(0)=f(T)$, and the periodic Fourier representation fails regardless of the
+estimator: $\ef=0.16$ for LSQ and $0.18$ for the PINN, with the error concentrated at the edges
+(Fig.~\ref{fig:field2}). The cosine series reduces the error by an order of magnitude ($1.6\times10^{-2}$
+for LSQ) and cubic B-splines with $n=80$ functions by two ($1.2\times10^{-3}$). With an LM stage, the
+PINN with a network field reaches $3.1\times10^{-3}$, comparable to shooting ($3.7\times10^{-3}$) and
+direct inversion ($3.0\times10^{-3}$). Without it, the PINN error is $0.22^\dagger$. MixFunn did not
+converge within the time limit ($0.13$).
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\textwidth]{fig3_field2.pdf}
+  \caption{Field~2, without noise; panels as in Fig.~\ref{fig:field1}. The periodic Fourier basis
+  produces Gibbs oscillations at the edges.}
+  \label{fig:field2}
+\end{figure*}
+
+\subsection{Field 3: a smooth pulse, with and without noise}\label{sec:field3}
+For field~3 the Adam-only PINN converges to an over-smoothed field with $\ef=0.26^\dagger$
+[Fig.~\ref{fig:field3}(a)], although the re-simulated trajectory is already close to the data
+($\er\sim10^{-2}$): a small trajectory error does not imply an accurate field, in line with the
+observation that PINN solutions become accurate only at very small loss
+values~\cite{rathore2024challenges}. With an LM stage the error drops to $(1.8$--$2.0)\times10^{-3}$ for
+the network, cosine and B-spline representations, and to $5.4\times10^{-3}$ for the Fourier series,
+which is limited by its basis (the same value as Fourier LSQ). The classical estimators with a rich basis
+are about ten times more accurate: $2.5\times10^{-4}$ for LSQ with B-splines or cosines and
+$1.5\times10^{-4}$ for shooting. Panel~(c) shows that both metrics rank the methods in the same order once
+the optimizer has converged.
+
+With noise ($\sigma=0.01$) all estimators that converge lie between $4\times10^{-2}$ and
+$7\times10^{-2}$ [Fig.~\ref{fig:field3}(d)--(f)]; the error is dominated by the noise, mostly in the
+high-frequency components to which the data are least sensitive. The Fourier basis, with only 21
+coefficients, acts as a strong regularizer and gives the lowest error ($3.9\times10^{-2}$).
+\TODO{PINN with LM stage and noise in the current protocol; regularization chosen by validation.}
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\textwidth]{fig4_field3.pdf}
+  \caption{Field~3, (a)--(c) without noise and (d)--(f) with noise $\sigma=0.01$; panels as in
+  Fig.~\ref{fig:field1}.}
+  \label{fig:field3}
+\end{figure*}
+
+\subsection{The optimizer is the bottleneck}\label{sec:optimizer}
+Figure~\ref{fig:optim} isolates the effect of the second stage for field~3, with the network and the
+B-spline representations and the same 3000 Adam steps. L-BFGS lowers the median error from $0.26$ to
+$3\times10^{-2}$, dense BFGS to $10^{-2}$, and LM to $10^{-3}$ (network field). Our self-scaled BFGS
+variant did not reproduce the gains reported in Refs.~\cite{urban2025unveiling,kiyani2025optimizer}
+($\simeq0.1$; see SM), and causal weights~\cite{wang2022causality} did not improve LM. These results
+agree with the ill-conditioning analysis of Ref.~\cite{rathore2024challenges}: for this problem, the
+choice of optimizer changes the error by two orders of magnitude, much more than the choice of
+representation.
+
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.8\linewidth]{fig_benchmark.pdf}
-  \caption{Median relative error of the recovered field over five seeds, for every method and
-  scenario (\texttt{run/fig\_artigo.py}, data in \texttt{data/resultados/padrao}).}
-  \label{fig:benchmark}
+  \includegraphics[width=\columnwidth]{fig5_optimizers.pdf}
+  \caption{Field error for field~3 (no noise) after 3000 Adam steps followed by each second-stage
+  optimizer; points are seeds, bars are medians. Data from the earlier protocol (fixed collocation grid,
+  40 B-splines). \TODO{update with profile \texttt{otimizadores}}}
+  \label{fig:optim}
 \end{figure}
 
-\TODO{Preliminary: 260 of 440 runs. Missing: PINN+LM with noise; Adam-only and L-BFGS recipes for
-the network, Fourier, cosine and B-spline fields. Update every number below from
-\texttt{data/resultados/padrao/RESULTADOS.md} when complete.}
+% =====================================================================================
+\section{Outlook: harder settings}\label{sec:outlook}
 
-\paragraph{Adam-only training.} PINNs trained as in common practice (small network, raw time input,
-residual only at the data points, Adam with a fixed learning rate) recover field~3 with
-$\approx 25\%$ error for every field parametrization. The recovered field is a smoothed version of the
-true one, while the re-simulated trajectory is already close to the data (RMS error $\sim\!10^{-2}$):
-a small trajectory error does not imply an accurate field.
+The results above concern the most favourable case: a single qubit whose full Bloch vector is measured.
+There, classical estimators are hard to beat. The value of a PINN lies where these estimators do not
+apply directly; we identify two such settings and the obstacles they bring.
 
-\paragraph{Second-order optimization.} Adding a Levenberg--Marquardt stage after 3000 Adam steps
-reduces the median field error for field~3 to $0.20\%$ (field as network output), $0.18\%$ (cubic
-B-splines with 80 functions) and $0.19\%$ (cosine series), consistently over five seeds
-(Fig.~\ref{fig:benchmark}). For field~1 ($\cos t$) all linear parametrizations reach
-$\sim\!10^{-5}$. Once the optimizer is adequate the parametrization matters: the periodic Fourier
-basis cannot represent field~2, for which $f(0)\neq f(T)$ (18\%, Gibbs phenomenon), while the
-network reaches $0.31\%$. MixFunn reaches $3\times10^{-4}$ for $\cos t$, but it did not converge
-within the time limit for the other fields (13--25\%).
+\subsection{Two-qubit Hamiltonian}\label{sec:twoqubits}
+For two qubits with a time-dependent exchange coupling,
+\begin{equation}
+  H(t) = \omega_1\,\sigma_z^{(1)} + \omega_2\,\sigma_z^{(2)}
+        + f(t)\big(\sigma_x^{(1)}\sigma_x^{(2)} + \sigma_y^{(1)}\sigma_y^{(2)}\big),
+  \label{eq:H2}
+\end{equation}
+the data are the fifteen expectation values $\langle\sigma_\mu^{(1)}\sigma_\nu^{(2)}\rangle$, which
+obey the Heisenberg equations used in the PINNverse
+framework~\cite{castelano2024freezing,delima2025pinnverse}; amplitude damping and dephasing can be
+included through Lindblad dissipators~\cite{lindblad1976,gorini1976}. Two features make this problem
+qualitatively different. (i)~The exchange term conserves the number of excitations, and
+$(\sigma_x\sigma_x+\sigma_y\sigma_y)|00\rangle=0$: the initial states $|00\rangle$ and $|11\rangle$ are
+completely blind to the field, the two-qubit analogue of $|+\rangle$ in
+Sec.~\ref{sec:identifiability}. We verified numerically that the fifteen expectation values are
+identical for $f$ and $f/2$ when starting from $|00\rangle$, whereas they differ by order one from
+$|01\rangle$ or $|{+}{+}\rangle$. (ii)~For equal frequencies, $\omega_1=\omega_2$, the drift commutes
+with the coupling and $U(t)=e^{-iH_0t}e^{-i\Phi(t)H_1}$ with $\Phi(t)=\int_0^tf$; the data depend on $f$
+only through its integral (verified to $10^{-7}$). The field must then be recovered as the derivative of
+an identified phase, which changes the conditioning of the problem with respect to the single-qubit
+case. These two-qubit models, with and without dissipation, are implemented in the original notebooks
+of our code repository and will be included in the protocol.
 
-\paragraph{Comparison with classical inversion.} With complete, noiseless measurements, classical
-estimators with the same basis are more accurate than the best PINN: for field~3, shooting with
-80 B-splines reaches $0.015\%$ and linear least squares $0.025\%$, against $\approx 0.2\%$ for the
-PINNs, at a cost below one second instead of minutes. Enlarging the basis (40 to 80 B-splines;
-cosines instead of a periodic Fourier series) improves the classical estimators by a factor of ten.
-With noise ($\sigma = 0.01$) all classical estimators lie between $3.9\%$ and $6.9\%$, and the
-information content of the data, not the method, limits the accuracy
-\TODO{PINN results with noise}.
+\subsection{Partial information}\label{sec:partial}
+If only $\langle\sigma_z\rangle$ is measured, Eq.~\eqref{eq:direct} and the linear least-squares
+estimators are no longer available, because $X$ and $Y$ are unknown. A PINN treats them as latent
+variables constrained by Eq.~\eqref{eq:bloch}, and shooting remains applicable. The symmetry
+$\sigma_zH(f)\sigma_z=H(-f)$, together with $\sigma_z|0\rangle=|0\rangle$, implies that $f$ and $-f$
+produce exactly the same $\langle\sigma_z\rangle(t)$ (verified numerically), so the sign of the field is
+not identifiable from $|0\rangle$. A second symmetry of Eq.~\eqref{eq:bloch},
+$(X,Y,Z,f)\to(X,Y,-Z,-f)$, leaves invariant every initial state with $Z=0$; from $|+\rangle$, therefore,
+$\langle\sigma_x\rangle$ and $\langle\sigma_y\rangle$ together still cannot fix the sign of $f$.
+A generic initial state, e.g.\ $(1,1,1)/\sqrt3$, breaks both symmetries ($\max_t|\Delta Z|=1.5$ between
+$f$ and $-f$), as does measuring two observables. Several initial states sharing the same field remove
+the blind intervals of each one; with the same measurement budget, three initial states reduced the LSQ
+error from $0.15$ to $0.07$ in a preliminary study (Table~S3). The spectral resolution of each
+method---the error as a function of the frequency of the field, whose limits are set by the $1/\omega$
+sensitivity and by the basis (Figs.~S1 and S2)---will be quantified with single-tone pulses.
+\TODO{run profile \texttt{espectral} and the partial-data extension}
 
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=0.6\linewidth]{fig_campos.pdf}
-  \caption{Field~3 recovered by an Adam-only PINN, a PINN with an LM stage and shooting (seed 0).}
-  \label{fig:fields}
-\end{figure}
-
-% Ablation figure: run `python run/rodar.py --perfil ablacao` and `python run/fig_artigo.py`
-% (writes figures/fig_ablacao.pdf), then uncomment.
-% \begin{figure}[t]
-%   \centering
-%   \includegraphics[width=0.75\linewidth]{fig_ablacao.pdf}
-%   \caption{Ablation of the PINN ingredients (field~3, no noise).}
-%   \label{fig:ablation}
-% \end{figure}
-
-% Spectral-resolution figure: run `python run/rodar.py --perfil espectral` and
-% `python run/fig_espectral.py` (writes figures/fig_espectral.pdf), then uncomment.
-% \begin{figure}[t]
-%   \centering
-%   \includegraphics[width=\linewidth]{fig_espectral.pdf}
-%   \caption{Spectral resolution: field error versus pulse frequency $\omega$. The dotted line is the
-%   highest frequency of the $M=10$ Fourier basis.}
-%   \label{fig:spectral}
-% \end{figure}
-
-\TODO{Ablation (figure commented out): run profile \texttt{ablacao}. Spectral resolution: profile
-\texttt{espectral} not run yet.}
-
-% -------------------------------------------------------------------------------------
+% =====================================================================================
 \section{Conclusions}\label{sec:conclusions}
-(Preliminary.) Under a single protocol, the accuracy of PINNs for this inverse problem is limited by
-the optimizer: Adam alone yields an over-smoothed field, and a Gauss--Newton (Levenberg--Marquardt)
-stage improves it by two orders of magnitude. With complete, noiseless data, classical least squares
-and shooting with a good basis are still more accurate and much cheaper, so the case for PINNs has to
-be made where these estimators do not apply directly: partial observations (e.g.\ only
-$\langle\sigma_z\rangle$, where $|0\rangle$ makes the sign of $f$ unidentifiable), several initial
-states sharing one field, and open-system dynamics \TODO{}.
 
-\bibliographystyle{unsrtnat}
+We compared PINNs with classical estimators for recovering a time-dependent control field from qubit
+expectation values under a single protocol. The initial state must not be aligned with the control
+axis; $|0\rangle$ makes the field observable at all times. Trained with Adam alone, PINNs converge to an
+over-smoothed field whatever the representation of the field, while the trajectory already fits the
+data. A Gauss--Newton (Levenberg--Marquardt) stage removes this limitation and lowers the error by two
+orders of magnitude, after which the representation matters: periodic Fourier series fail for
+non-periodic fields, and cubic B-splines, cosine series and network fields perform similarly. With
+complete, noiseless data, classical least squares and shooting with a rich basis remain more accurate
+and much cheaper; with noise, all good estimators are limited by the data. The natural place for
+physics-informed estimators is therefore the setting where classical estimators fail---partial
+measurements, several qubits and open-system dynamics---provided that the blind states and symmetries
+identified here are avoided and the training uses a second-order optimizer.
+\TODO{revise when the benchmark is complete}
+
+\begin{acknowledgments}
+\TODO{funding agencies (FAPESP, CNPq, CAPES) and grant numbers.}
+\end{acknowledgments}
+
+\section*{Data availability}
+The code, the data of every run and the scripts that produce all figures and tables are available at
+\url{https://github.com/GubioGL/Pinn-inverse-for-H-time}.
+
+\bibliographystyle{apsrev4-2}
 \bibliography{references}
 
 \end{document}

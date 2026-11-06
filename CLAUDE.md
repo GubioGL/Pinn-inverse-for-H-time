@@ -24,7 +24,12 @@ paper are in English where new, Portuguese in the existing code.
   only when known from the pulse design (`bloch.bordas_conhecidas`); always report `erro_campo`
   and `rmse_traj`; ≥ 5 seeds for the main profiles.
 - Results: `python run/rodar.py --perfil <p>` (resumable; one JSON per job in data/resultados/<p>/jobs),
-  then `python run/relatorio.py --perfil <p>` and `python run/fig_artigo.py`.
+  then `python run/relatorio.py --perfil <p>`, `python run/tabelas_artigo.py` (paper/tabelas/*.tex) and
+  `python run/fig_artigo.py` (paper/figures/*.pdf, style in src/estilo.py: APS column widths, LaTeX fonts,
+  Okabe-Ito colours). Result tables are generated, never typed; numbers quoted in the prose
+  must be re-checked against the regenerated tables whenever the data change.
+- Paper: revtex4-2 (APS). main.tex (two columns) + supplementary.tex (one column, S-numbered); both
+  \input the generated tables. Results missing in the current profile fall back to v1 with a dagger.
 - `data/resultados/v1_*` were produced by an earlier version of the code (kept for the record).
 
 ## Paper / Overleaf

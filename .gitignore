@@ -40,3 +40,4 @@ paper/main.pdf
 # Protocol: quick smoke-test results and temporary files
 data/resultados/rapido/
 *.json.tmp
+paper/*Notes.bib

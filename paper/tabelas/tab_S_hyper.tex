@@ -1,0 +1,17 @@
+\begin{tabular}{p{0.2\linewidth}p{0.34\linewidth}p{0.38\linewidth}}
+\toprule
+item & Adam-only recipe (as in common practice) & improved recipes \\
+\midrule
+state network & $2$ hidden layers $\times$ $15$, $\sin$ & $3$ hidden layers $\times$ $32$, $\sin$ \\
+network input & $t$ & $s=2t/T-1$ \\
+initial condition & soft (data term) & hard, $\boldsymbol r(t)=\boldsymbol r_0+(t/T)\,\mathrm{NN}$ \\
+field edges & free & hard when known ($f(0)=f(T)=0$ for field 3) \\
+collocation points & the $N=100$ data points & $N$ data points $+$ $200$ uniform random points, redrawn every Adam epoch \\
+field coefficients at start & zero & linear least squares on the data \\
+floating point & single (float32) & double (float64) \\
+Adam & 20000 epochs, learning rate $1\times10^{-3}$, constant & 3000 epochs, learning rate $1\times10^{-3}$ $\to$ $1\times10^{-5}$ (cosine schedule) \\
+second stage & none & L-BFGS 5000 it.\ (history 50, strong Wolfe); BFGS 8000 it.; LM 600 it. \\
+smoothness weight $\lambda_f$ & \multicolumn{2}{l}{$\sigma=0$: $0$; $\sigma=0.01$: $1\times10^{-6}$; $\sigma=0.03$: $1\times10^{-5}$} \\
+time limit per run & \multicolumn{2}{l}{420 s (single CPU thread)} \\
+\bottomrule
+\end{tabular}

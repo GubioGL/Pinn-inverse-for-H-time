@@ -53,7 +53,9 @@ vantagem real, junto com o shooting.
 4. **Identificabilidade (já verificado):** com só ⟨σz⟩ e estado inicial **|0⟩, f e −f geram
    exatamente o mesmo ⟨σz⟩(t)**. Isso vem da simetria σz H(f) σz = H(−f) com σz|0⟩ = |0⟩. A
    diferença medida foi 0,0 no caso 3. O sinal do campo não é identificável e nenhum método
-   resolve isso. Com |+⟩ acontece o mesmo em ⟨σx⟩ (diferença 0,00). Opções:
+   resolve isso. Com |+⟩, ⟨σx⟩ **e** ⟨σy⟩ são exatamente iguais para f e −f, pela simetria
+   (X, Y, Z, f) → (X, Y, −Z, −f) das equações de Bloch, que preserva estados com Z = 0. Só ⟨σz⟩
+   carrega o sinal. Opções:
    - estado inicial genérico, ex. (1,1,1)/√3: max|Z(f) − Z(−f)| = 1,5, então a simetria quebra;
    - medir dois observáveis (ex. ⟨σx⟩ e ⟨σz⟩);
    - aceitar f a menos de sinal e reportar |f|.

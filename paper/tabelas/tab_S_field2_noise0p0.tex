@@ -1,0 +1,20 @@
+\begin{tabular}{lcccc}
+\toprule
+method & $\epsilon_f$ median & $\epsilon_f$ [min, max] & $\epsilon_r$ median & time (s) \\
+\midrule
+LSQ, B-spline ($n{=}80$) & $1.2\times10^{-3}$ & [$1.2\times10^{-3}$, $1.2\times10^{-3}$] & $6.2\times10^{-5}$ & 0 \\
+shooting, B-spline ($n{=}40$) & $2.2\times10^{-3}$ & [$2.2\times10^{-3}$, $2.2\times10^{-3}$] & $5.9\times10^{-5}$ & 0 \\
+LSQ, B-spline ($n{=}40$) & $2.4\times10^{-3}$ & [$2.4\times10^{-3}$, $2.4\times10^{-3}$] & $1.6\times10^{-4}$ & 0 \\
+direct inversion & $3.0\times10^{-3}$ & [$3.0\times10^{-3}$, $3.0\times10^{-3}$] & $1.7\times10^{-3}$ & 0 \\
+NN field, Adam + LM & $3.1\times10^{-3}$ & [$1.6\times10^{-3}$, $5.1\times10^{-3}$] & $1.1\times10^{-4}$ & 290 \\
+shooting, B-spline ($n{=}80$) & $3.7\times10^{-3}$ & [$3.7\times10^{-3}$, $3.7\times10^{-3}$] & $1.5\times10^{-4}$ & 0 \\
+B-spline ($n{=}80$), Adam + LM & $5.1\times10^{-3}$ & [$4.5\times10^{-3}$, $1.5\times10^{-2}$] & $2.2\times10^{-4}$ & 319 \\
+LSQ, cosine ($M{=}40$) & $1.6\times10^{-2}$ & [$1.6\times10^{-2}$, $1.6\times10^{-2}$] & $4.4\times10^{-3}$ & 0 \\
+cosine ($M{=}40$), Adam + LM & $2.4\times10^{-2}$ & [$2.2\times10^{-2}$, $2.8\times10^{-2}$] & $6.7\times10^{-4}$ & 313 \\
+MixFunn, Adam + LM & $0.13$ & [$4.8\times10^{-2}$, $0.18$] & $1.0\times10^{-2}$ & 422 \\
+LSQ, Fourier ($M{=}10$) & $0.16$ & [$0.16$, $0.16$] & $5.5\times10^{-2}$ & 0 \\
+Fourier ($M{=}10$), Adam + LM & $0.18$ & [$0.18$, $0.18$] & $1.0\times10^{-2}$ & 309 \\
+MixFunn, Adam + L-BFGS & $0.22$ & [$0.21$, $0.33$] & $1.8\times10^{-2}$ & 51 \\
+MixFunn, Adam only & $0.89$ & [$0.32$, $72$] & $0.29$ & 77 \\
+\bottomrule
+\end{tabular}
