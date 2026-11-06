@@ -28,9 +28,10 @@ Perfis
   padrao      : casos 1, 2, 3 sem ruído + caso 3 com ruído 0.01; 5 seeds
   completo    : casos 1, 2, 3 x ruído {0, 0.01, 0.03}; 5 seeds (para GPU / muitas CPUs)
   otimizadores: caso 3, sem ruído, 5 seeds: L-BFGS, BFGS, SS-BFGS, LM, LM+causal
-  ablacao     : caso 3, sem ruído, 3 seeds: efeito de cada novidade (colocação aleatória,
+  ablacao     : caso 3, sem ruído, 2 seeds, metade das épocas/iterações: efeito de cada novidade (colocação aleatória,
                 borda rígida, warm start, variable projection, pesos adaptativos)
-  espectral   : pulsos sin(w t) sin^2(pi t/T) com w = 1 ... 20; ruído 0 e 0.01; 3 seeds
+  espectral   : pulsos sin(w t) sin^2(pi t/T) com w = 1 ... 20; ruído 0 e 0.01; 2 seeds
+                (use --seeds 0 1 2 3 4 numa GPU para mais seeds)
 """
 N_PONTOS = 100
 R0 = (0.0, 0.0, 1.0)          # |0>
@@ -152,13 +153,13 @@ PERFIS = {
         metodos=metodos_pinn(["lbfgs", "bfgs", "ssbfgs", "lm", "lm_causal"], ("nn", "bspline")),
         t_max_job=900),
     "ablacao": dict(
-        cenarios=[(3, 0.0)], seeds=[0, 1, 2],
-        metodos={**metodos_pinn(["lm", "lm_sembc", "lm_semreamostra", "lm_soDados", "lm_pesos"],
-                                ("nn", "bspline")),
-                 **metodos_pinn(["lm_seminit", "lm_varpro"], ("bspline",))},
-        t_max_job=420),
+        cenarios=[(3, 0.0)], seeds=[0, 1],
+        metodos=_epocas({**metodos_pinn(["lm", "lm_sembc", "lm_semreamostra", "lm_soDados", "lm_pesos"],
+                                        ("nn", "bspline")),
+                         **metodos_pinn(["lm_seminit", "lm_varpro"], ("bspline",))}, 0.5),
+        t_max_job=240),
     "espectral": dict(
-        cenarios=[(f"w{w}", r) for r in (0.0, 0.01) for w in OMEGAS], seeds=[0, 1, 2],
+        cenarios=[(f"w{w}", r) for r in (0.0, 0.01) for w in OMEGAS], seeds=[0, 1],
         metodos={k: CLASSICOS[k] for k in ("direta", "lsq_fourier10", "lsq_cosseno40",
                                            "lsq_bspline80", "shooting_bs80")}
         | metodos_pinn(["lm"], ("nn", "bspline")),

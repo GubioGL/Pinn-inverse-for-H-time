@@ -1,9 +1,9 @@
 # Métodos para melhorar PINNs: o que a literatura recente diz e o que foi testado aqui
 
-Resumo da pesquisa e do que foi implementado em `otimizadores.py` / `pinn.py`. Os números
-medidos estão em `resultados/*/RESULTADOS.md` e no resumo de `../ANALISE.md`.
+Resumo da pesquisa e do que foi implementado em `src/otimizadores.py` / `src/pinn.py`. Os números
+medidos estão em `data/resultados/*/RESULTADOS.md` e no resumo de [`ANALISE.md`](ANALISE.md).
 
-**Resultado medido** (perfil `ablacao`: caso 3, sem ruído, estado |0⟩, 5 seeds; mesma rede 3×32,
+**Resultado medido na v1** (perfil `v1_ablacao`: caso 3, sem ruído, estado |0⟩, 5 seeds; mesma rede 3×32,
 mesmos 3000 passos de Adam antes do 2º estágio; mediana do erro do campo):
 
 | 2º estágio | campo = rede (`nn`) | campo = B-spline 40 | tempo/seed (CPU, 1 thread) |
@@ -50,10 +50,13 @@ Detalhes da implementação (`otimizadores.py::lm`):
 | técnica | ideia | referência | status aqui |
 |---|---|---|---|
 | **Pesos causais** | em problemas de evolução temporal, pesar o resíduo de cada bloco de tempo por exp(−ε · resíduo acumulado dos blocos anteriores), para o treino respeitar a ordem temporal | Wang, Sankaran & Perdikaris, *Respecting causality is all you need for training PINNs* ([arXiv:2203.07404](https://arxiv.org/abs/2203.07404)) | receita `lm_causal`. Medido: **sem ganho** (0,17 % vs 0,10 % com nn; 0,72 % vs 0,76 % com B-spline, dentro da variação entre seeds). Faz sentido: aqui há dados densos em todo o intervalo, e eles já "ancoram" todos os tempos |
-| **Restrições rígidas** | impor a condição inicial por construção, r(t) = r0 + (t/T)·NN(t) | prática padrão (ex.: Lu et al. 2021, *PINNs with hard constraints for inverse design*) | **em todas as receitas melhoradas** |
+| **Restrições rígidas** | impor condições por construção na saída da rede: r(t) = r0 + (t/T)·NN(t) e, quando f(0), f(T) são conhecidos pelo desenho do pulso, f = g − (1−τ)g(0) − τg(T) + (1−τ)a + τb | Lu et al., *PINNs with hard constraints for inverse design*, SIAM J. Sci. Comput. 2021 | **em todas as receitas melhoradas** (v2). Efeito da borda do campo: receita `lm_sembc`, perfil `ablacao` |
 | **Normalização da entrada** | t → s = 2t/T − 1 | prática padrão | em todas as receitas melhoradas |
 | **Multi-stage NN** | treinar uma 2ª rede no resíduo da 1ª, e assim por diante; chega perto da precisão de máquina | Wang & Lai, *Multi-stage neural networks: Function approximator of machine precision*, J. Comput. Phys. 2024 ([arXiv:2307.08934](https://arxiv.org/abs/2307.08934)) | não implementado. Candidato natural depois do LM, se for preciso ir abaixo de 1e-3 |
-| Pesos adaptativos (SA-PINN, RBA, gradient-norm/NTK) | aprender ou ajustar pesos por ponto ou por termo da loss | McClenny & Braga-Neto (arXiv:2009.04544); Anagnostopoulos et al. (arXiv:2307.00379); Wang, Teng & Perdikaris (arXiv:2001.04536) | não implementado. Com LM a loss já chega a ~1e-8 sem pesos, e Urbán et al. obtêm o mesmo com bons otimizadores |
+| **Pesos adaptativos** (gradient-norm) | ajustar o peso da loss de dados pela razão max\|∇L_EDO\| / mean\|∇L_dados\| | Wang, Teng & Perdikaris, SIAM J. Sci. Comput. 2021 (arXiv:2001.04536); variantes: SA-PINN (McClenny & Braga-Neto, arXiv:2009.04544), RBA (Anagnostopoulos et al., arXiv:2307.00379) | **implementado (v2)** no Adam (`pesos_adapt`, receita `lm_pesos`). Volta a 1 no estágio de 2ª ordem, para todos os métodos minimizarem a mesma função |
+| **Colocação aleatória reamostrada** | pontos da EDO = dados + pontos uniformes aleatórios sorteados a cada época | Wu et al., *A comprehensive study of non-adaptive and residual-based adaptive sampling for PINNs*, CMAME 2023 | **implementado (v2)**, padrão nas receitas melhoradas. Controles: `lm_semreamostra` (sorteio fixo), `lm_soDados` (EDO só nos pontos dos dados) |
+| **Variable projection** | coeficientes de campos lineares resolvidos em forma fechada (mínimos quadrados) a cada passo | Golub & Pereyra, *Separable nonlinear least squares: the variable projection method*, Inverse Problems 2003 | **implementado (v2)** no Adam (`varpro`, receita `lm_varpro`) |
+| **Warm start por mínimos quadrados** | coeficientes iniciais do campo a partir dos dados (derivadas por spline) | — | **implementado (v2)**, padrão nas receitas melhoradas; controle `lm_seminit` |
 | Fourier features / PirateNets | combater o viés espectral da rede | Tancik et al. 2020; Wang et al., *PirateNets* (arXiv:2402.00326) | não implementado. O campo tem componente sin 7t, então pode ajudar a rede do estado |
 | NysNewton-CG | Newton-CG com precondicionador de Nyström | Rathore et al. 2024 | não implementado. Alternativa ao LM para redes grandes |
 

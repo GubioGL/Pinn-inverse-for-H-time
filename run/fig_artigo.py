@@ -34,7 +34,7 @@ from paths import DATA, save_figure
 import executar
 
 ROTULOS = {
-    "direta": "inversão direta", "lsq_fourier10": "LSQ Fourier M=10", "lsq_cosseno40": "LSQ cossenos M=40",
+    "direta": "direct inversion", "lsq_fourier10": "LSQ Fourier M=10", "lsq_cosseno40": "LSQ cosine M=40",
     "lsq_bspline40": "LSQ B-spline n=40", "lsq_bspline80": "LSQ B-spline n=80",
     "shooting_bs40": "shooting B-spline n=40", "shooting_bs80": "shooting B-spline n=80",
 }
@@ -72,36 +72,41 @@ def fig_benchmark(res):
                 ax.text(j, i, txt, ha="center", va="center", fontsize=5.5,
                         color="white" if v < 3e-3 else "black")
     ax.set_xticks(range(len(cen)))
-    ax.set_xticklabels([f"caso {c}\n$\\sigma$={r:g}" for c, r in cen], fontsize=7)
-    nomes = [ROTULOS.get(m, m.replace("pinn_", "PINN ").replace("_", " + ")) for m in metodos]
+    ax.set_xticklabels([f"field {c}\n$\\sigma$={r:g}" for c, r in cen], fontsize=7)
+    nomes = [ROTULOS.get(m, m.replace("pinn_", "PINN ").replace("cosseno", "cosine").replace("_", " + ")
+                         .replace("+ lm", "+ LM").replace("+ lbfgs", "+ L-BFGS").replace("+ original", "(Adam only)"))
+             for m in metodos]
     ax.set_yticks(range(len(metodos)))
     ax.set_yticklabels(nomes, fontsize=6.5)
     ax.axhline(len(classicos) - 0.5, color="w", lw=2)
-    for k in range(1, len(RECEITAS)):
-        ax.axhline(len(classicos) + k * len(CAMPOS) - 0.5, color="w", lw=1)
+    receita = [m.rsplit("_", 1)[-1] for m in pinns]
+    for i in range(1, len(pinns)):
+        if receita[i] != receita[i - 1]:
+            ax.axhline(len(classicos) + i - 0.5, color="w", lw=1)
+    ax.set_ylim(len(metodos) - 0.5, -0.5)
     cb = fig.colorbar(im, ax=ax, fraction=0.05, pad=0.02)
-    cb.set_label("mediana do erro L2 relativo do campo", fontsize=7)
+    cb.set_label("median relative $L_2$ error of the field", fontsize=7)
     cb.ax.tick_params(labelsize=6)
     return save_figure(fig, "fig_benchmark")
 
 
 def fig_campos(res):
-    escolhas = [("pinn_nn_original", "PINN (treino original)", "#d62728", ":"),
-                ("pinn_nn_lm", "PINN campo-rede + LM", "#1f77b4", "--"),
-                ("shooting_bs80", "shooting B-spline n=80", "#9467bd", "-.")]
+    escolhas = [("pinn_nn_original", "PINN, Adam only", "#d62728", ":"),
+                ("pinn_nn_lm", "PINN (network field) + LM", "#1f77b4", "--"),
+                ("shooting_bs80", "shooting, 80 B-splines", "#9467bd", "-.")]
     ruidos = sorted({r["ruido"] for r in res if r["caso"] == 3})
     fig, axes = plt.subplots(len(ruidos), 1, figsize=(3.4, 1.9 * len(ruidos)), sharex=True)
     axes = np.atleast_1d(axes)
     for ax, ruido in zip(axes, ruidos):
         t, data, clean, ffn, T = executar.gerar_dados(3, ruido, 0)
-        ax.plot(t, ffn(t), "k-", lw=2.2, label="verdadeiro")
+        ax.plot(t, ffn(t), "k-", lw=2.2, label="true")
         for m, rot, cor, ls in escolhas:
             r = [x for x in res if x["metodo"] == m and x["caso"] == 3 and x["ruido"] == ruido and x["seed"] == 0]
             if r and r[0]["status"] == "ok":
                 ax.plot(t, r[0]["f_pred"], ls=ls, color=cor, lw=1.3,
                         label=f"{rot} ({100 * r[0]['erro_campo']:.2g}%)")
         ax.set_ylabel("$f(t)$")
-        ax.set_title(rf"caso 3, $\sigma$ = {ruido:g}", fontsize=8)
+        ax.set_title(rf"field 3, $\sigma$ = {ruido:g}", fontsize=8)
         ax.legend(fontsize=5.5, frameon=False, loc="lower left")
         for side in ("top", "right"):
             ax.spines[side].set_visible(False)
@@ -112,10 +117,10 @@ def fig_campos(res):
 
 def fig_ablacao(res):
     ordem = ["lm", "lm_sembc", "lm_seminit", "lm_semreamostra", "lm_soDados", "lm_varpro", "lm_pesos"]
-    rot = {"lm": "receita completa (LM)", "lm_sembc": "sem borda rígida do campo",
-           "lm_seminit": "sem warm start (LSQ)", "lm_semreamostra": "colocação fixa (sem resorteio)",
-           "lm_soDados": "EDO só nos pontos dos dados", "lm_varpro": "+ variable projection",
-           "lm_pesos": "+ pesos adaptativos"}
+    rot = {"lm": "full recipe (LM)", "lm_sembc": "no hard field edges",
+           "lm_seminit": "no least-squares warm start", "lm_semreamostra": "fixed collocation (no redraw)",
+           "lm_soDados": "residual only at data points", "lm_varpro": "+ variable projection",
+           "lm_pesos": "+ adaptive loss weights"}
     fig, ax = plt.subplots(figsize=(4.2, 2.6))
     y = 0
     ticks, labels = [], []
@@ -135,7 +140,7 @@ def fig_ablacao(res):
     ax.set_yticklabels(labels, fontsize=6)
     ax.invert_yaxis()
     ax.set_xscale("log")
-    ax.set_xlabel("erro L2 relativo do campo (caso 3, sem ruído)", fontsize=7)
+    ax.set_xlabel("relative $L_2$ error of the field (field 3, no noise)", fontsize=7)
     ax.grid(axis="x", alpha=0.3, which="both", lw=0.4)
     for side in ("top", "right"):
         ax.spines[side].set_visible(False)

@@ -45,18 +45,18 @@ def observabilidade():
     for ax, case in zip(axes, [1, 2, 3]):
         f, T = cm.make_case(case)
         t = np.linspace(0, T, 400)
-        for name, r0 in [("|+> (notebooks)", cm.R0_PLUS), ("|0>", cm.R0_ZERO),
-                         ("genérico (1,1,1)/√3", cm.R0_GENERIC)]:
+        for name, r0 in [(r"$|+\rangle$", cm.R0_PLUS), (r"$|0\rangle$", cm.R0_ZERO),
+                         (r"generic $(1,1,1)/\sqrt{3}$", cm.R0_GENERIC)]:
             r = cm.simulate(f, t, r0)
             w = r[:, 1] ** 2 + r[:, 2] ** 2
             ax.plot(t, w, label=name)
             frac = np.mean(w < 0.05)
             print(f"caso {case} | r0={name:22s} | fração do tempo com Y²+Z² < 0.05: {frac:5.1%}"
                   f" | min = {w.min():.2e}")
-        ax.set_title(f"caso {case}")
+        ax.set_title(f"field {case}")
         ax.set_xlabel("t")
         ax.axhline(0.05, color="k", lw=0.5, ls=":")
-    axes[0].set_ylabel(r"$Y^2+Z^2$  (sensibilidade a f)")
+    axes[0].set_ylabel(r"$Y^2+Z^2$ (sensitivity to $f$)")
     axes[0].legend(fontsize=8)
     plt.tight_layout()
     save_figure(fig, "observabilidade")

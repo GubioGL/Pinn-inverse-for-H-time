@@ -1,5 +1,20 @@
 # Lembretes / próximos passos
 
+## [ ] Rodar o estudo de resolução espectral (código pronto, não rodado ainda)
+
+Pulsos f(t) = sin(ωt)·sin²(πt/T), ω ∈ {1, 2, 4, 6, 8, 10, 12, 15, 20}, ruído 0 e 0,01. Métodos:
+inversão direta, LSQ (Fourier 10, cossenos 40, B-spline 80), shooting B-spline 80, PINN-LM
+(campo-rede e B-spline). Leva ~1 h em 4 CPUs com 2 seeds; numa GPU, use mais seeds:
+
+```bash
+python run/rodar.py --perfil espectral --device cuda --workers 8 --seeds 0 1 2 3 4
+python run/fig_espectral.py        # -> paper/figures/fig_espectral.pdf
+```
+
+O que esperar (capacidade das bases, `run/diagnostico.py` e Parte 3 de ANALISE.md): a Fourier
+M=10 não passa de ω ≈ 2π·10/T ≈ 7,9; os cossenos M=40 vão até ω ≈ 10–15; a B-spline de 80
+funções até ω ≈ 15 (1 %); a sensibilidade dos dados cai ~1/ω, então com ruído o erro cresce com ω.
+
 ## [ ] Novo caso: vários estados iniciais com o mesmo campo (NÃO fazer agora)
 
 **Por quê:** cada estado inicial "enxerga" o campo em instantes diferentes, porque a informação

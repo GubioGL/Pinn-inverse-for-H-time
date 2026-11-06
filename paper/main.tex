@@ -33,7 +33,19 @@ physics-informed neural networks versus classical inversion}
 \maketitle
 
 \begin{abstract}
-\TODO{Abstract -- write it last.}
+We study the inverse problem of recovering an unknown time-dependent control field $f(t)$ of a
+driven qubit, $H=\tfrac12\sigma_z+\tfrac12 f(t)\sigma_x$, from measured expectation values, and compare
+physics-informed neural networks (PINNs) with classical inversion under a single protocol: identical
+data, initial state $|0\rangle$, no access to the true field, five seeds, and two metrics (field error
+and re-simulated trajectory error). PINNs trained with Adam alone, as in common practice, converge to
+an over-smoothed field with $\sim\!25\%$ error regardless of how the field is parametrized (neural
+network, Fourier series, B-splines, MixFunn). A Levenberg--Marquardt stage reduces the error by two
+orders of magnitude (to $\sim\!0.2\%$), which shows that the optimizer, not the representation, is the
+bottleneck. With complete, noiseless measurements, classical linear least squares and shooting with a
+suitable basis remain about ten times more accurate and thousands of times faster
+\TODO{update with the complete benchmark and the noisy case}. We also show why the initial
+state $|+\rangle$, an eigenstate of the control operator, makes the field unidentifiable at early
+times.
 \end{abstract}
 
 % -------------------------------------------------------------------------------------
@@ -43,7 +55,13 @@ control~\cite{norambuena2024pinnqc} and for learning time-independent Hamiltonia
 parameters~\cite{liu2025ipinnhl}. Here we study the inverse problem of recovering an unknown
 \emph{time-dependent} control field from the measured expectation values of a driven qubit, and we
 ask a simple question: under a single, fair protocol, when do PINNs beat classical inversion?
-\TODO{Context, gap, contribution, outline.}
+Recovering a control field from measurements is relevant for calibrating and characterizing
+quantum devices, where the pulse that actually reaches the qubit differs from the programmed one
+\TODO{add references on pulse characterization}. Earlier PINN studies of this kind of problem
+compare a single model against the ground truth. Here we compare several field parametrizations and
+optimizers against classical estimators that use the same data. Section~\ref{sec:problem} states the
+problem and analyses its identifiability, Sec.~\ref{sec:methods} describes the methods and the
+protocol, Sec.~\ref{sec:results} presents the results, and Sec.~\ref{sec:conclusions} concludes.
 
 Contributions:
 \begin{itemize}
@@ -57,7 +75,7 @@ Contributions:
         Levenberg--Marquardt (Gauss--Newton) stage improves the field error by one to two orders of
         magnitude over Adam, in line with recent work on second-order PINN
         training~\cite{rathore2024challenges,urban2025unveiling,kiyani2025optimizer,muller2023engd,jnini2024gnngd};
-  \item a spectral-resolution study: the error as a function of the frequency of the field.
+  \item a spectral-resolution study: the error as a function of the frequency of the field \TODO{run}.
 \end{itemize}
 
 % -------------------------------------------------------------------------------------
@@ -85,7 +103,8 @@ effect on the state and cannot be identified. With $|0\rangle$, $\dot Y(0) = -f(
 $Y^2+Z^2 \geq 0.13$ over the whole interval for the three test fields (Fig.~\ref{fig:observability}).
 We therefore use $|0\rangle$ throughout. With the same measurement budget this halves the error of
 the classical estimators and reduces its spread across noise realizations
-(\TODO{table from data/parte1}). With only $\langle\sigma_z\rangle$ measured, however, $|0\rangle$ makes
+(from $0.15\pm0.05$ to $0.07\pm0.01$ for linear least squares at $\sigma=0.01$, five noise
+realizations; \texttt{data/parte1/resultados\_desenho\_experimental.csv}). With only $\langle\sigma_z\rangle$ measured, however, $|0\rangle$ makes
 $f$ and $-f$ indistinguishable, because $\sigma_z H(f)\sigma_z = H(-f)$.
 
 \begin{figure}[t]
@@ -143,8 +162,33 @@ and the RMS error of the trajectory re-simulated with the recovered field. Code:
   \label{fig:benchmark}
 \end{figure}
 
-\TODO{Describe Fig.~\ref{fig:benchmark}: original Adam-only PINNs, effect of the second-order stage,
-comparison with classical inversion, role of the parametrization, noisy case.}
+\TODO{Preliminary: 260 of 440 runs. Missing: PINN+LM with noise; Adam-only and L-BFGS recipes for
+the network, Fourier, cosine and B-spline fields. Update every number below from
+\texttt{data/resultados/padrao/RESULTADOS.md} when complete.}
+
+\paragraph{Adam-only training.} PINNs trained as in common practice (small network, raw time input,
+residual only at the data points, Adam with a fixed learning rate) recover field~3 with
+$\approx 25\%$ error for every field parametrization. The recovered field is a smoothed version of the
+true one, while the re-simulated trajectory is already close to the data (RMS error $\sim\!10^{-2}$):
+a small trajectory error does not imply an accurate field.
+
+\paragraph{Second-order optimization.} Adding a Levenberg--Marquardt stage after 3000 Adam steps
+reduces the median field error for field~3 to $0.20\%$ (field as network output), $0.18\%$ (cubic
+B-splines with 80 functions) and $0.19\%$ (cosine series), consistently over five seeds
+(Fig.~\ref{fig:benchmark}). For field~1 ($\cos t$) all linear parametrizations reach
+$\sim\!10^{-5}$. Once the optimizer is adequate the parametrization matters: the periodic Fourier
+basis cannot represent field~2, for which $f(0)\neq f(T)$ (18\%, Gibbs phenomenon), while the
+network reaches $0.31\%$. MixFunn reaches $3\times10^{-4}$ for $\cos t$, but it did not converge
+within the time limit for the other fields (13--25\%).
+
+\paragraph{Comparison with classical inversion.} With complete, noiseless measurements, classical
+estimators with the same basis are more accurate than the best PINN: for field~3, shooting with
+80 B-splines reaches $0.015\%$ and linear least squares $0.025\%$, against $\approx 0.2\%$ for the
+PINNs, at a cost below one second instead of minutes. Enlarging the basis (40 to 80 B-splines;
+cosines instead of a periodic Fourier series) improves the classical estimators by a factor of ten.
+With noise ($\sigma = 0.01$) all classical estimators lie between $3.9\%$ and $6.9\%$, and the
+information content of the data, not the method, limits the accuracy
+\TODO{PINN results with noise}.
 
 \begin{figure}[t]
   \centering
@@ -153,27 +197,37 @@ comparison with classical inversion, role of the parametrization, noisy case.}
   \label{fig:fields}
 \end{figure}
 
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=0.75\linewidth]{fig_ablacao.pdf}
-  \caption{Ablation of the PINN ingredients (field~3, no noise).}
-  \label{fig:ablation}
-\end{figure}
+% Ablation figure: run `python run/rodar.py --perfil ablacao` and `python run/fig_artigo.py`
+% (writes figures/fig_ablacao.pdf), then uncomment.
+% \begin{figure}[t]
+%   \centering
+%   \includegraphics[width=0.75\linewidth]{fig_ablacao.pdf}
+%   \caption{Ablation of the PINN ingredients (field~3, no noise).}
+%   \label{fig:ablation}
+% \end{figure}
 
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\linewidth]{fig_espectral.pdf}
-  \caption{Spectral resolution: field error versus pulse frequency $\omega$. The dotted line is the
-  highest frequency of the $M=10$ Fourier basis.}
-  \label{fig:spectral}
-\end{figure}
+% Spectral-resolution figure: run `python run/rodar.py --perfil espectral` and
+% `python run/fig_espectral.py` (writes figures/fig_espectral.pdf), then uncomment.
+% \begin{figure}[t]
+%   \centering
+%   \includegraphics[width=\linewidth]{fig_espectral.pdf}
+%   \caption{Spectral resolution: field error versus pulse frequency $\omega$. The dotted line is the
+%   highest frequency of the $M=10$ Fourier basis.}
+%   \label{fig:spectral}
+% \end{figure}
 
-\TODO{Ablation (Fig.~\ref{fig:ablation}) and spectral resolution (Fig.~\ref{fig:spectral}).}
+\TODO{Ablation (figure commented out): run profile \texttt{ablacao}. Spectral resolution: profile
+\texttt{espectral} not run yet.}
 
 % -------------------------------------------------------------------------------------
 \section{Conclusions}\label{sec:conclusions}
-\TODO{Main messages; outlook: partial observations (only $\langle\sigma_z\rangle$), several initial
-states, open systems.}
+(Preliminary.) Under a single protocol, the accuracy of PINNs for this inverse problem is limited by
+the optimizer: Adam alone yields an over-smoothed field, and a Gauss--Newton (Levenberg--Marquardt)
+stage improves it by two orders of magnitude. With complete, noiseless data, classical least squares
+and shooting with a good basis are still more accurate and much cheaper, so the case for PINNs has to
+be made where these estimators do not apply directly: partial observations (e.g.\ only
+$\langle\sigma_z\rangle$, where $|0\rangle$ makes the sign of $f$ unidentifiable), several initial
+states sharing one field, and open-system dynamics \TODO{}.
 
 \bibliographystyle{unsrtnat}
 \bibliography{references}

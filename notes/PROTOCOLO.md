@@ -176,7 +176,7 @@ Opções úteis do `rodar.py`:
 | `completo` | casos 1–3 × σ ∈ {0, 0.01, 0.03}, 5 seeds | clássicos + original/lbfgs/bfgs/lm × 5 campos |
 | `otimizadores` | (3, 0), 5 seeds | lbfgs/bfgs/ssbfgs/lm/lm_causal × campos nn e bspline |
 | `ablacao` | (3, 0), 3 seeds | variantes do `lm` × campos nn e bspline |
-| `espectral` | pulsos sin(ωt)sin²(πt/T), ω ∈ {1,…,20}, σ ∈ {0, 0.01}, 3 seeds | clássicos + PINN-LM (nn, bspline) |
+| `espectral` | pulsos sin(ωt)sin²(πt/T), ω ∈ {1,…,20}, σ ∈ {0, 0.01}, 2 seeds (mais com `--seeds`) | clássicos + PINN-LM (nn, bspline) |
 
 ## Arquivos
 

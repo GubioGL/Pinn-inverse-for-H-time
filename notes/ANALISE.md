@@ -57,7 +57,76 @@ Além de reduzir o erro, |0⟩ reduz muito a variância entre realizações do r
 
 ## Parte 3 (v2): melhorias pedidas e protocolo atualizado
 
-PARTE3_PLACEHOLDER
+> **Status: resultados PARCIAIS** (benchmark interrompido a pedido, 260 de 440 jobs). Completos,
+> com 5 seeds: todos os métodos clássicos; PINN + LM nos casos 1, 2 e 3 sem ruído para os campos
+> rede, Fourier, cossenos e B-spline; todas as receitas do MixFunn. **Faltam:** PINN + LM no
+> caso 3 com ruído; receitas `original` e `lbfgs` dos campos rede, Fourier, cossenos e B-spline;
+> ablation v2; estudo espectral. Para completar (retoma de onde parou):
+> `python run/rodar.py --perfil padrao`, depois `--perfil ablacao` e
+> `python run/relatorio.py --perfil padrao`, `python run/fig_artigo.py`.
+
+**O que foi implementado nesta etapa** (detalhes em [`PROTOCOLO.md`](PROTOCOLO.md)):
+
+| pedido | implementação |
+|---|---|
+| restrições rígidas em t = 0 e t = T | estado: r(0) = r0 exato. Campo: f(0) = a e f(T) = b exatos via f = g − (1−τ)g(0) − τg(T) + (1−τ)a + τb, para os 5 campos, **quando (a, b) é conhecido pelo desenho do pulso** (caso 3: 0 e 0). Nos casos 1 e 2 isso não é imposto, porque usaria o campo verdadeiro. O estado em T não tem condição de contorno (problema de valor inicial) |
+| EDO em mais pontos que os dados | pontos dos dados + 200 pontos aleatórios **sorteados a cada época** do Adam |
+| sugestões para Fourier e B-spline | série de cossenos (sem Gibbs), B-spline cúbica com 80 funções, coeficientes iniciados por mínimos quadrados, *variable projection* opcional |
+| pesos adaptativos | razão das normas dos gradientes (Wang et al. 2021), opção `pesos_adapt` |
+| duas métricas | já era padrão: `erro_campo` e `rmse_traj` em todo job e relatório |
+| resolução espectral | perfil `espectral` e `run/fig_espectral.py` prontos, **não rodados** (ver [`TODO.md`](TODO.md)) |
+
+**Mediana do erro do campo, 5 seeds (parcial; figura em `paper/figures/fig_benchmark.pdf`):**
+
+| método | caso 1 | caso 2 | caso 3 | caso 3, σ = 0,01 |
+|---|---|---|---|---|
+| LSQ Fourier M=10 (periódica) | 0,0004 % | 16 % | 0,49 % | 3,9 % |
+| LSQ cossenos M=40 | 0,0006 % | 1,6 % | 0,025 % | 6,5 % |
+| LSQ B-spline n=40 → **n=80** | 0,0008 → 0,0009 % | 0,24 → **0,12 %** | 0,28 → **0,025 %** | 5,9 → 6,7 % |
+| shooting B-spline n=40 → **n=80** | 0,001 → 0,002 % | 0,22 → 0,37 % | 0,28 → **0,015 %** | 6,2 → 5,7 % |
+| inversão direta | 0,13 % | 0,30 % | 0,16 % | 6,9 % |
+| PINN campo-rede + LM | 0,004 % | **0,31 %** | 0,20 % | (falta) |
+| PINN B-spline (n=80) + LM | 0,004 % | 0,51 % | **0,18 %** | (falta) |
+| PINN cossenos + LM | 0,001 % | 2,4 % | 0,19 % | (falta) |
+| PINN Fourier + LM | 0,0008 % | 18 % | 0,54 % | (falta) |
+| PINN MixFunn + LM | 0,03 % | 13 % | 25 % | 26 % |
+| PINN MixFunn original | 5,3 % | 89 % | 65 % | 58 % |
+
+Leitura preliminar:
+
+1. **As sugestões para as bases funcionam, e mais nos métodos clássicos.**
+   - B-spline de 40 → 80 funções: o LSQ do caso 3 vai de 0,28 % para 0,025 % e o shooting
+     para 0,015 %.
+   - Cossenos no lugar da Fourier periódica: o caso 2 cai de 16 % para 1,6 %, sem Gibbs.
+2. **O PINN + LM também melhora com a base maior** (B-spline: 0,76 % na v1 → 0,18 %), mas para em
+   ~0,2 % no caso 3, cerca de 10× acima do shooting/LSQ com a mesma base. Com medida completa e
+   sem ruído, o mínimo quadrado clássico continua mais preciso e milhares de vezes mais rápido.
+   No caso 2, o PINN com campo-rede (0,31 %) fica no nível dos clássicos (0,12–0,37 %).
+3. **Campo-rede no caso 3: 0,20 % (v2) vs 0,10 % (v1).** A v2 mudou várias coisas ao mesmo tempo
+   (colocação aleatória, borda rígida, regularização zero sem ruído). A ablation v2 (pendente)
+   separa o efeito de cada uma. No caso 2, a v2 melhorou (0,48 % → 0,31 %).
+4. **MixFunn piorou na v2** (caso 3: 16 % → 25 %). Com 300 pontos de colocação, cada iteração
+   do LM ficou mais cara, e o MixFunn bateu no limite de tempo de 7 min por job antes de
+   convergir. **Esse limite é desfavorável ao MixFunn.** Para uma comparação justa, rodar sem
+   limite de tempo (por exemplo, na GPU).
+5. **Ruído σ = 0,01:** os clássicos ficam em 3,9–6,9 %, como na v1. O PINN + LM com ruído ainda
+   não rodou.
+
+**O protocolo é justo?** O que é igual para todos os métodos:
+- dados, N, estado inicial, seeds e métricas;
+- campo verdadeiro fora de tudo;
+- mesma rede do estado e inicialização;
+- mesmo nº de épocas de Adam e de iterações do 2º estágio;
+- mesmos pontos de colocação;
+- mesma regularização por nível de ruído e mesmas restrições rígidas.
+
+O que **não** é igual, por natureza ou por escolha:
+- **nº de parâmetros do campo:** Fourier 21, cossenos 41, B-spline 80, rede compartilhada,
+  MixFunn ~240;
+- **hiperparâmetros:** não foram ajustados método a método. Todos usam o mesmo padrão. O script
+  original do MixFunn, por exemplo, usava lr = 1e-2 e *pruning*;
+- **limite de tempo por job:** igual para todos, mas penaliza quem tem iteração mais cara (MixFunn).
+
 
 ---
 
