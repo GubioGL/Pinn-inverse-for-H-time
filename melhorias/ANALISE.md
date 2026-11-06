@@ -10,6 +10,69 @@ inicial $|+\rangle$. Os 4 métodos (rede neural, Fourier, B-spline, MixFunn) dif
 parametrização de f(t)**. O resto (rede para o estado + resíduo da EDO como penalidade + Adam) é
 igual em todos.
 
+---
+
+## Parte 2 (atualização): protocolo único, estado |0⟩, 5 seeds
+
+Código em [`protocolo/`](protocolo/README.md): mesmos dados para todos os métodos, estado inicial
+|0⟩, N = 100, campo verdadeiro fora da loss, 5 seeds, métricas de erro do campo e de RMSE da
+trajetória re-simulada. Roda em paralelo, em CPU ou GPU, e é retomável. Os resultados completos
+estão em [`protocolo/resultados/padrao/RESULTADOS.md`](protocolo/resultados/padrao/RESULTADOS.md)
+(320 jobs, todos ok, 95 min em 4 núcleos) e
+[`protocolo/resultados/ablacao/RESULTADOS.md`](protocolo/resultados/ablacao/RESULTADOS.md).
+
+**Mediana do erro do campo (5 seeds):**
+
+| método | caso 1, σ=0 | caso 2, σ=0 | caso 3, σ=0 | caso 3, σ=0,01 |
+|---|---|---|---|---|
+| PINN campo-rede + **LM** (`pinn_nn_lm`) | 0,003 % | 0,48 % | **0,10 %** | 5,5 % |
+| PINN B-spline + LM | 0,003 % | 0,76 % | 0,76 % | 5,5 % |
+| PINN Fourier + LM | 0,0008 % | 18 % (Gibbs) | 0,51 % | 4,8 % |
+| PINN MixFunn + LM | 0,008 % | 3,2 % | 16 % | 21 % |
+| PINN (melhor campo) + L-BFGS | 0,29 % | 11 % | 2,2 % | 5,7 % |
+| PINN original (nn / Fourier / B-spline: só Adam) | 0,4–0,7 % | 22–30 % | 25–26 % | 25–26 % |
+| PINN MixFunn original | 5,3 % | 85 % | 66 % | 69 % |
+| inversão direta (sem PINN) | 0,13 % | 0,30 % | 0,16 % | 6,9 % |
+| mínimos quadrados lineares B-spline 40 | 0,0008 % | 0,24 % | 0,28 % | 5,9 % |
+| mínimos quadrados lineares Fourier 10 | 0,0004 % | 16 % (Gibbs) | 0,49 % | **3,9 %** |
+| shooting B-spline 40 | 0,001 % | **0,22 %** | 0,28 % | 6,2 % |
+
+O que mudou em relação à Parte 1:
+
+1. **O otimizador resolve o problema principal.** Com Levenberg-Marquardt (Gauss-Newton
+   amortecido) depois de 3000 passos de Adam, o erro no caso 3 cai de ~25 % para 0,10 % (campo
+   como rede) e 0,76 % (B-spline). É um ganho de 30–250×. Todos os 5 seeds convergem, e o pior
+   fica em 0,21 %. O L-BFGS ganha ~10× e o BFGS denso ~20×. Os pesos causais não ajudaram
+   (detalhes e referências em [`protocolo/METODOS.md`](protocolo/METODOS.md)).
+2. **Com um bom otimizador, o PINN fica no nível dos métodos clássicos ou acima.** No caso 3
+   sem ruído, o PINN com campo em rede + LM é o melhor de todos (0,10 % contra 0,16–0,28 % dos
+   clássicos), porque a rede não tem o piso de representação da B-spline de 40 funções.
+3. **Só com um bom otimizador a parametrização passa a fazer diferença:**
+   - A **Fourier periódica** falha no caso 2 (18 %), onde f(0) ≠ f(T) gera Gibbs. Os
+     mínimos quadrados com a mesma base também falham, então o problema é a base, não o
+     treino.
+   - A **B-spline de 40 funções** tem um piso de ~0,3–0,8 %.
+   - O **MixFunn** é excelente no caso 1 (f = cos t, 0,008 %), mas difícil de otimizar nos
+     outros casos (3–21 %, com grande variação entre seeds).
+4. **Com ruído σ = 0,01, todos os bons métodos ficam em 4–7 %.** O limite passa a ser a
+   informação nos dados, não o método. O PINN+LM reconstrói a trajetória com RMSE de 3e-3, abaixo
+   do ruído. A regularização λ foi fixada *a priori*. Escolher λ por validação (separar pontos
+   de dados), sem usar o campo verdadeiro, é o próximo passo natural.
+5. **O estado |0⟩ sozinho não salva a receita original:** só com Adam o erro continua em ~25 %.
+   O que o |0⟩ garante é que o campo é observável em todo o intervalo. Assim dá para tirar a
+   "cola" `f(0)=f_true(0)` e deixar o otimizador chegar ao campo certo.
+6. **Custo:** o LM leva ~3 min por seed em 1 thread de CPU (Jacobiano por ponto + Cholesky
+   1100×1100). Na GPU esses dois passos devem acelerar bastante. Rode `python verificar_ambiente.py`
+   para medir. Os métodos clássicos levam < 1 s.
+
+**Lembrete (próxima etapa):** dados parciais, só ⟨σz⟩. Ver [`TODO.md`](TODO.md). Atenção: com
+estado inicial |0⟩ e só ⟨σz⟩, **f e −f geram exatamente os mesmos dados** (σz H(f) σz = H(−f)),
+então o sinal do campo não é identificável.
+
+---
+
+## Parte 1: diagnóstico inicial (estado |+⟩)
+
 Tudo nesta pasta roda em CPU, em minutos:
 
 ```bash
